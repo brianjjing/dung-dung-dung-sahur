@@ -16,10 +16,20 @@ MOCK_SERIAL = True
 CAMERA_INDEX     = 0           # Logitech webcam on the Uno Q (via the USB hub)
 # MOCK_VISION=True skips the camera/model and uses MOCK_VISION_LABEL below.
 MOCK_VISION = True
-MOCK_VISION_LABEL = "munition"          # what the fake classifier "sees"
-VISION_MODEL_PATH = "models/payload_classifier.tflite"
-VISION_LABELS     = ["package", "munition"]   # index order must match training
-VISION_INPUT_SIZE = 96                  # square input expected by your model
+MOCK_VISION_LABEL = "drone"             # what the fake classifier "sees"
+
+# ------------------------------------------------------- ON-DEVICE DRONE MODEL
+# Local YOLOv8 ONNX detector. Trained from the Roboflow Universe
+# ahmedmohsen/drone-detection-new-peksv dataset (3 classes:
+# AirPlane, Drone, Helicopter). Runs 100% offline.
+ONNX_MODEL_PATH      = "models/drone_detector.onnx"
+VISION_INPUT_SIZE    = 416              # must match the imgsz used at training
+VISION_VOTE_WINDOW   = 5                # last N classify() calls considered
+VISION_VOTE_MIN_HITS = 2                # require this many drone-hits in window
+VISION_CLASS_NAMES   = ["drone"]
+HOSTILE_CLASS        = "drone"          # which class triggers the hostile signal
+DRONE_CONF_THRESHOLD = 0.60             # min per-box confidence to count as a hit
+DRONE_NMS_IOU        = 0.45             # NMS overlap threshold
 
 # ------------------------------------------------------------ DETECT THRESHOLDS
 # Two DETECT backends:
