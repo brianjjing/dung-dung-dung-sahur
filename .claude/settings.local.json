@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git mv *)",
+      "Bash(mv cerberus *)",
+      "Bash(mv triple-d/uno_r3/cerberus_car/cerberus_car.ino triple-d/uno_r3/cerberus_car/triple_d_car.ino)",
+      "Bash(mv triple-d/uno_r3/cerberus_car triple-d/uno_r3/triple_d_car)",
+      "Bash(mv cerberus_car.ino triple_d_car.ino)",
+      "Bash(sed -i '' -e 's/main\\\\.py - CERBERUS brain/main.py - Triple D brain/' -e 's/class Cerberus:/class TripleD:/' -e 's/\\\\[cerberus\\\\]/[triple-d]/g' -e 's/Cerberus\\(\\)\\\\.run\\(\\)/TripleD\\(\\).run\\(\\)/' triple-d/uno_q/main.py)",
+      "Bash(sed -i '' 's/CERBERUS - car-side firmware/Triple D - car-side firmware/' triple_d_car.ino triple-d/uno_r3/triple_d_car/triple_d_car.ino)",
+      "Bash(sed -i '' 's/CERBERUS - Uno Q \\(Linux\\)/Triple D - Uno Q \\(Linux\\)/' triple-d/uno_q/requirements.txt)"
+    ]
+  }
+}
