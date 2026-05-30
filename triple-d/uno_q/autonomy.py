@@ -157,4 +157,8 @@ if __name__ == "__main__":
     if config.AUTONOMY_LEVEL != 3:
         print(f"[autonomy] WARNING: AUTONOMY_LEVEL={config.AUTONOMY_LEVEL} in config.py "
               f"(expected 3). Set it to 3 for human-on-the-loop behaviour.")
+<<<<<<< HEAD
     L3TripleD().run()
+=======
+    L3TripleD().run()
+>>>>>>> 38886bff9f8b3bd993679991d5d2097ff321428a
