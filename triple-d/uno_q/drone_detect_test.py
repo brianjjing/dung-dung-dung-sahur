@@ -24,16 +24,16 @@ import onnxruntime as ort
 
 MODEL_PATH    = os.path.join(os.path.dirname(__file__),
                              "models", "drone_detector.onnx")
-CLASS_NAMES   = ["AirPlane", "Drone", "Helicopter"]
+CLASS_NAMES   = ["drone"]   # single-class drone_v3 model
 INPUT_SIZE    = 416
-CONF_THRESH   = 0.60
+CONF_THRESH   = 0.40
 NMS_IOU       = 0.45
 CAMERA_INDEX  = 0
 # BGR box colors per class
 COLORS = {
-    "AirPlane":   (255, 200,   0),   # sky blue-ish
+    "AirPlane":   (255, 200,   0),
     "Drone":      (  0,   0, 255),   # red — the one we care about
-    "Helicopter": (  0, 200, 255),   # amber
+    "Helicopter": (  0, 200, 255),
 }
 
 

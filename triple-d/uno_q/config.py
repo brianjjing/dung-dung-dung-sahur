@@ -26,8 +26,8 @@ ONNX_MODEL_PATH      = "models/drone_detector.onnx"
 VISION_INPUT_SIZE    = 416              # must match the imgsz used at training
 VISION_VOTE_WINDOW   = 5                # last N classify() calls considered
 VISION_VOTE_MIN_HITS = 2                # require this many drone-hits in window
-VISION_CLASS_NAMES   = ["AirPlane", "Drone", "Helicopter"]
-HOSTILE_CLASS        = "Drone"          # which class triggers the hostile signal
+VISION_CLASS_NAMES   = ["drone"]
+HOSTILE_CLASS        = "drone"          # which class triggers the hostile signal
 DRONE_CONF_THRESHOLD = 0.60             # min per-box confidence to count as a hit
 DRONE_NMS_IOU        = 0.45             # NMS overlap threshold
 

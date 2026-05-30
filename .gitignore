@@ -1,3 +1,6 @@
 .venv/
 
 __pycache__/
+
+# model backups kept locally for rollback, not versioned
+*.onnx.bak
