@@ -86,11 +86,12 @@ class VisionClassifier:
                   f"-> '{config.MOCK_VISION_LABEL}'")
             return
 
-        model_path = config.ONNX_MODEL_PATH
-        if not os.path.isabs(model_path):
-            model_path = os.path.join(os.path.dirname(__file__), model_path)
-        if not os.path.exists(model_path):
-            print(f"[decide] no ONNX at {model_path}; falling back to MOCK "
+        self.model_path = config.ONNX_MODEL_PATH
+        if not os.path.isabs(self.model_path):
+            self.model_path = os.path.join(os.path.dirname(__file__),
+                                           self.model_path)
+        if not os.path.exists(self.model_path):
+            print(f"[decide] no ONNX at {self.model_path}; falling back to MOCK "
                   f"(train+export first)")
             self.mock = True
 
@@ -101,6 +102,7 @@ class VisionClassifier:
         if self.active:
             return True
         self.active = True
+        self._vote_hist.clear()          # fresh ring buffer per threat window
         print("[decide] >> VISION ACTIVATED (signalled by acoustic threat)")
         if self.mock:
             return True
@@ -110,10 +112,10 @@ class VisionClassifier:
             if not self.cap.isOpened():
                 raise RuntimeError(f"camera {config.CAMERA_INDEX} not available")
             self.session = ort.InferenceSession(
-                model_path, providers=["CPUExecutionProvider"]
+                self.model_path, providers=["CPUExecutionProvider"]
             )
             self._input_name = self.session.get_inputs()[0].name
-            print(f"[decide] vision online -> {os.path.basename(model_path)} "
+            print(f"[decide] vision online -> {os.path.basename(self.model_path)} "
                   f"(offline, classes={config.VISION_CLASS_NAMES})")
         except Exception as e:                       # noqa: BLE001
             print(f"[decide] vision init failed ({e}); falling back to MOCK")

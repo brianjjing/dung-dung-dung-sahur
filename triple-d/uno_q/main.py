@@ -57,6 +57,7 @@ class TripleD:
 
         self.state = State.IDLE
         self.cooldown_until = 0.0
+        self.decide_deadline = 0.0
         self.verdict = None
         self.authorized = []
         self.period = 1.0 / config.LOOP_HZ
@@ -88,24 +89,35 @@ class TripleD:
             if contact:
                 print("\n[DETECT] acoustic contact -- RF-silent signature")
                 # Listening model judged a threat: signal the vision model to
-                # wake up before we hand off to DECIDE.
+                # wake up, then watch for a drone for up to VISION_DECIDE_TIMEOUT_S.
                 self.vision.activate()
+                self.decide_deadline = time.time() + config.VISION_DECIDE_TIMEOUT_S
                 self.state = State.DECIDING
 
         elif s is State.DECIDING:
+            # Vision is awake: run the drone detector on a fresh frame each loop,
+            # smoothing hits over its ring-buffer vote window. Keep watching until
+            # the detector confirms a drone or the watch window expires.
             label, conf = self.vision.classify()
-            is_closing = self.closing.is_closing()
-            self.verdict = decide.assess(self.detector.confidence,
-                                         label, conf, is_closing)
-            print(f"[DECIDE] {'HOSTILE' if self.verdict.hostile else 'BENIGN'} "
-                  f"score={self.verdict.score}")
-            for r in self.verdict.reasons:
-                print(f"         - {r}")
-            if self.verdict.hostile:
-                self.state = State.AUTHORIZING
-            else:
-                print("[DECIDE] judged benign (supplies?) -- standing down\n")
-                self._enter_cooldown()
+            if label == "drone":
+                is_closing = self.closing.is_closing()
+                self.verdict = decide.assess(self.detector.confidence,
+                                             label, conf, is_closing)
+                print(f"\n[DECIDE] {'HOSTILE' if self.verdict.hostile else 'BENIGN'} "
+                      f"score={self.verdict.score}")
+                for r in self.verdict.reasons:
+                    print(f"         - {r}")
+                if self.verdict.hostile:
+                    self.state = State.AUTHORIZING
+                else:
+                    print("[DECIDE] judged benign (supplies?) -- standing down\n")
+                    self._enter_cooldown()
+            elif time.time() >= self.decide_deadline:
+                print(f"\n[DECIDE] no drone seen in "
+                      f"{config.VISION_DECIDE_TIMEOUT_S:.1f}s -- back to listening\n")
+                self.vision.deactivate()   # webcam dark until next audio threat
+                self.state = State.IDLE
+            # else: stay in DECIDING and keep watching on the next loop
 
         elif s is State.AUTHORIZING:
             self.authorized = []
@@ -114,15 +126,23 @@ class TripleD:
                     self.authorized.append(action)
                 else:
                     print(f"[operator] '{action}' denied")
-            self.state = State.DEFEATING
+            if not self.authorized:
+                # Operator vetoed every response: don't fire anything, stand the
+                # vision model back down and go straight back to listening for
+                # an acoustic threat.
+                print("[operator] all actions denied -- standing down, "
+                      "back to listening\n")
+                self.vision.deactivate()
+                self._enter_cooldown()
+            else:
+                self.state = State.DEFEATING
 
         elif s is State.DEFEATING:
-            if self.authorized:
-                print(f"[DEFEAT] firing: {', '.join(self.authorized)}")
-                for action in self.authorized:
-                    self.responder.fire(action)
-            else:
-                print("[DEFEAT] no actions authorized -- holding")
+            # Reached only with >=1 authorized action (all-denied is handled in
+            # AUTHORIZING, which routes straight back to listening).
+            print(f"[DEFEAT] firing: {', '.join(self.authorized)}")
+            for action in self.authorized:
+                self.responder.fire(action)
             self._enter_cooldown()
 
         elif s is State.COOLDOWN:

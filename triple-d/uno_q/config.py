@@ -15,7 +15,9 @@ MOCK_SERIAL = True
 # ---------------------------------------------------------------------- CAMERA
 CAMERA_INDEX     = 0           # Logitech webcam on the Uno Q (via the USB hub)
 # MOCK_VISION=True skips the camera/model and uses MOCK_VISION_LABEL below.
-MOCK_VISION = True
+# False -> run the real drone_detector.onnx on the webcam (auto-falls back to
+# MOCK if cv2/onnxruntime/model/camera are missing).
+MOCK_VISION = False
 MOCK_VISION_LABEL = "drone"             # what the fake classifier "sees"
 
 # ------------------------------------------------------- ON-DEVICE DRONE MODEL
@@ -57,6 +59,9 @@ DETECT_HOLD  = 0.5             # seconds the signature must persist to fire
 CLOSING_WINDOW_S    = 2.0      # history length for trend analysis
 CLOSING_DROP_CM     = 15       # distance must fall this much to read "closing"
 SCORE_HOSTILE       = 0.60     # fused score at/above this => HOSTILE verdict
+# After acoustic wakes vision, how long to watch for a drone before giving up
+# and standing the camera back down to resume audio listening.
+VISION_DECIDE_TIMEOUT_S = 1.5
 
 # ----------------------------------------------------------------- AUTONOMY DIAL
 # 0 teleop | 1 single-action assist | 2 detect+recommend, human gates ALL
