@@ -16,10 +16,21 @@ MOCK_SERIAL = True
 CAMERA_INDEX     = 0           # Logitech webcam on the Uno Q (via the USB hub)
 # MOCK_VISION=True skips the camera/model and uses MOCK_VISION_LABEL below.
 MOCK_VISION       = True
-MOCK_VISION_LABEL = "munition"          # what the fake classifier "sees"
-VISION_MODEL_PATH = "models/payload_classifier.tflite"
-VISION_LABELS     = ["package", "munition"]   # index order must match training
-VISION_INPUT_SIZE = 96                  # square input expected by your model
+MOCK_VISION_LABEL = "drone"             # what the fake classifier "sees"
+VISION_INPUT_SIZE = 416                 # square JPEG side sent to Roboflow
+
+# ----------------------------------------------------------------- ROBOFLOW API
+# Hosted inference for the drone-detection-new-peksv model (v3).
+# https://universe.roboflow.com/ahmedmohsen/drone-detection-new-peksv/model/3
+# Get a free key at roboflow.com -> Settings -> API Keys, then either set
+# the ROBOFLOW_API_KEY env var or paste it below.
+import os
+ROBOFLOW_API_KEY     = os.environ.get("ROBOFLOW_API_KEY", "")
+ROBOFLOW_MODEL       = "drone-detection-new-peksv"
+ROBOFLOW_VERSION     = 3
+ROBOFLOW_URL         = "https://detect.roboflow.com"
+DRONE_CONF_THRESHOLD = 0.40             # min per-box confidence to count as a hit
+ROBOFLOW_TIMEOUT_S   = 2.0              # network timeout; fail fast on bad link
 
 # ------------------------------------------------------------ DETECT THRESHOLDS
 # Acoustic signature gate (tune against YOUR drone + room).
