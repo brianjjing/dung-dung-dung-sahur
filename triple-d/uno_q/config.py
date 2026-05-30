@@ -15,7 +15,7 @@ MOCK_SERIAL = True
 # ---------------------------------------------------------------------- CAMERA
 CAMERA_INDEX     = 0           # Logitech webcam on the Uno Q (via the USB hub)
 # MOCK_VISION=True skips the camera/model and uses MOCK_VISION_LABEL below.
-MOCK_VISION       = True
+MOCK_VISION = True
 MOCK_VISION_LABEL = "munition"          # what the fake classifier "sees"
 VISION_MODEL_PATH = "models/payload_classifier.tflite"
 VISION_LABELS     = ["package", "munition"]   # index order must match training
@@ -28,7 +28,7 @@ VISION_INPUT_SIZE = 96                  # square input expected by your model
 #   USE_CNN_DETECT=True  -> Mel-spectrogram CNN on the Uno Q's OWN mic, in
 #                           sliding windows (acoustic_cnn.CnnAcousticDetector).
 #                           Needs a real mic + torch/librosa/sounddevice.
-USE_CNN_DETECT = False
+USE_CNN_DETECT = True
 
 # CNN backend (only used when USE_CNN_DETECT=True)
 ACOUSTIC_MODEL_PATH   = "models/drone_acoustic_cnn.pth"
@@ -36,7 +36,7 @@ ACOUSTIC_THRESHOLD    = 0.40   # P(threat) to count as signature (lower=more sen
 ACOUSTIC_INFER_PERIOD = 0.30   # seconds between sliding-window classifications
 # OFFLINE TEST: set to a .wav path to loop a file through the CNN instead of
 # opening the mic (no sounddevice/PortAudio needed). "" = use the live mic.
-ACOUSTIC_SOURCE_WAV   = ""
+ACOUSTIC_SOURCE_WAV = ""
 
 # Acoustic signature gate (threshold backend; tune against YOUR drone + room).
 AMP_FLOOR    = 120             # min peak-to-peak amplitude to count as "loud"

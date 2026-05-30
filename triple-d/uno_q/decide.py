@@ -67,14 +67,31 @@ class ClosingTracker:
 
 
 class VisionClassifier:
-    """Logitech webcam -> payload class. Falls back to mock if no model/cam."""
+    """Logitech webcam -> payload class. Falls back to mock if no model/cam.
+
+    The vision model stays DORMANT until activate() is called. That activation
+    is the signal raised by the listening model (DETECT) the instant it judges
+    a threat -- only then do we power up the camera and load the classifier.
+    While IDLE the webcam stays dark and no inference runs.
+    """
     def __init__(self):
         self.mock = config.MOCK_VISION or not (_HAVE_CV and _HAVE_TFLITE)
         self.cap = None
         self.interp = None
+        self.active = False
         if self.mock:
             print(f"[decide] vision in MOCK mode -> '{config.MOCK_VISION_LABEL}'")
-            return
+
+    def activate(self):
+        """Wake the vision model. Called when the listening model signals a
+        threat. Idempotent -- repeated signals while already active are no-ops.
+        Returns True if the model is ready (live or mock)."""
+        if self.active:
+            return True
+        self.active = True
+        print("[decide] >> VISION ACTIVATED (signalled by acoustic threat)")
+        if self.mock:
+            return True
         try:
             self.cap = cv2.VideoCapture(config.CAMERA_INDEX)
             self.interp = tflite.Interpreter(model_path=config.VISION_MODEL_PATH)
@@ -85,9 +102,23 @@ class VisionClassifier:
         except Exception as e:                       # noqa: BLE001
             print(f"[decide] vision init failed ({e}); falling back to MOCK")
             self.mock = True
+        return True
+
+    def deactivate(self):
+        """Stand the vision model back down (e.g. on cooldown): release the
+        camera so the webcam goes dark again until the next threat signal."""
+        if not self.active:
+            return
+        if self.cap is not None:
+            self.cap.release()
+            self.cap = None
+        self.active = False
+        print("[decide] vision stood down")
 
     def classify(self):
-        """Return (label, confidence)."""
+        """Return (label, confidence). Dormant until activated."""
+        if not self.active:
+            return "unknown", 0.0
         if self.mock:
             return config.MOCK_VISION_LABEL, 0.80
         ok, frame = self.cap.read()

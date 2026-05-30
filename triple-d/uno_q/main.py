@@ -87,6 +87,9 @@ class TripleD:
             self._status(telem, "scanning")
             if contact:
                 print("\n[DETECT] acoustic contact -- RF-silent signature")
+                # Listening model judged a threat: signal the vision model to
+                # wake up before we hand off to DECIDE.
+                self.vision.activate()
                 self.state = State.DECIDING
 
         elif s is State.DECIDING:
@@ -125,6 +128,7 @@ class TripleD:
         elif s is State.COOLDOWN:
             if time.time() >= self.cooldown_until and not contact:
                 self.responder.all_off()
+                self.vision.deactivate()   # webcam dark until next threat
                 print("[triple-d] re-armed.\n")
                 self.state = State.IDLE
 
