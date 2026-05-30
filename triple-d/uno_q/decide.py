@@ -132,9 +132,15 @@ class VisionClassifier:
             self.cap.release()
 
 
-def assess(acoustic_conf: float, payload: str, payload_conf: float,
+def assess(acoustic_conf: float, vision_label: str, vision_conf: float,
            closing: bool) -> Verdict:
-    """Weighted fusion -> Verdict. Tune the weights to taste."""
+    """Weighted fusion -> Verdict. Tune the weights to taste.
+
+    vision_label is the Roboflow drone-detection result:
+      'drone'    -> visual confirmation, strong positive weight
+      'no_drone' -> frame is clean, small negative weight
+      'unknown'  -> vision channel unavailable, ignored
+    """
     reasons = []
     score = 0.0
 
@@ -142,14 +148,14 @@ def assess(acoustic_conf: float, payload: str, payload_conf: float,
     if acoustic_conf > 0:
         reasons.append(f"acoustic contact (conf {acoustic_conf:.2f})")
 
-    if payload == "munition":
-        score += 0.40 * payload_conf
-        reasons.append(f"payload looks like munition (conf {payload_conf:.2f})")
-    elif payload == "package":
-        score -= 0.20 * payload_conf
-        reasons.append(f"payload looks like supplies (conf {payload_conf:.2f})")
+    if vision_label == "drone":
+        score += 0.40 * vision_conf
+        reasons.append(f"vision confirms drone (conf {vision_conf:.2f})")
+    elif vision_label == "no_drone":
+        score -= 0.20
+        reasons.append("vision sees no drone in frame")
     else:
-        reasons.append("payload unclassified")
+        reasons.append("vision channel unavailable")
 
     if closing:
         score += 0.30
@@ -159,6 +165,6 @@ def assess(acoustic_conf: float, payload: str, payload_conf: float,
     return Verdict(
         hostile=score >= config.SCORE_HOSTILE,
         score=round(score, 2),
-        payload=payload,
+        payload=vision_label,
         reasons=reasons,
     )
