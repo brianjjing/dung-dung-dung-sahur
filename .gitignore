@@ -1,3 +1,7 @@
 .venv/
 
 __pycache__/
+
+triple-d/uno_q/__pycache__/
+triple-d/uno_q/models/
+triple-d/uno_q/models/__pycache__/
