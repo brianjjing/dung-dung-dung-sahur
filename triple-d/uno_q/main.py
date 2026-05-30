@@ -21,6 +21,20 @@ import human as op
 from defeat import Responder
 
 
+def _make_detector():
+    """Pick the DETECT backend. Falls back to the threshold gate if the CNN
+    deps/mic/model aren't available, so the pipeline always comes up."""
+    if not config.USE_CNN_DETECT:
+        return AcousticDetector()
+    try:
+        from acoustic_cnn import CnnAcousticDetector
+        return CnnAcousticDetector()
+    except Exception as e:                                   # noqa: BLE001
+        print(f"[detect] CNN backend unavailable ({e}); "
+              f"falling back to amp/pitch gate")
+        return AcousticDetector()
+
+
 class State(enum.Enum):
     IDLE        = "IDLE"
     DECIDING    = "DECIDING"
@@ -36,7 +50,7 @@ RESPONSE_PLAN = ["DISTRACT", "DAZZLE", "DEFEND"]
 class TripleD:
     def __init__(self):
         self.car       = CarLink()
-        self.detector  = AcousticDetector()
+        self.detector  = _make_detector()
         self.closing   = decide.ClosingTracker()
         self.vision    = decide.VisionClassifier()
         self.responder = Responder(self.car)
@@ -63,6 +77,8 @@ class TripleD:
         finally:
             self.responder.all_off()
             self.vision.release()
+            if hasattr(self.detector, "close"):
+                self.detector.close()
             self.car.close()
 
     def step(self, telem, contact):

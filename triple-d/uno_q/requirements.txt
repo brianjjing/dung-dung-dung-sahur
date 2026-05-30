@@ -11,6 +11,8 @@ pyserial>=3.5
 # tflite-runtime         # lightweight, preferred on the Uno Q
 # tensorflow             # heavier; only if tflite-runtime is unavailable
 
-# Optional: classify off the Uno Q's own webcam mic instead of the car mic
-# sounddevice>=0.4
-# librosa>=0.10
+# DETECT off the Uno Q's OWN mic with the trained CNN (USE_CNN_DETECT=True):
+# sounddevice>=0.4     # mic capture (needs PortAudio: apt install libportaudio2)
+# librosa>=0.10        # Mel-spectrogram
+# torch>=2.0           # runs drone_acoustic_cnn.pth (CPU build is fine)
+#   -> see acoustic_cnn.py; model file in models/drone_acoustic_cnn.pth

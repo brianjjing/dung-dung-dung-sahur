@@ -22,7 +22,23 @@ VISION_LABELS     = ["package", "munition"]   # index order must match training
 VISION_INPUT_SIZE = 96                  # square input expected by your model
 
 # ------------------------------------------------------------ DETECT THRESHOLDS
-# Acoustic signature gate (tune against YOUR drone + room).
+# Two DETECT backends:
+#   USE_CNN_DETECT=False -> threshold/debounce on the car-mic amp/pitch features
+#                           (detect.AcousticDetector). Works in MOCK_SERIAL mode.
+#   USE_CNN_DETECT=True  -> Mel-spectrogram CNN on the Uno Q's OWN mic, in
+#                           sliding windows (acoustic_cnn.CnnAcousticDetector).
+#                           Needs a real mic + torch/librosa/sounddevice.
+USE_CNN_DETECT = False
+
+# CNN backend (only used when USE_CNN_DETECT=True)
+ACOUSTIC_MODEL_PATH   = "models/drone_acoustic_cnn.pth"
+ACOUSTIC_THRESHOLD    = 0.40   # P(threat) to count as signature (lower=more sensitive)
+ACOUSTIC_INFER_PERIOD = 0.30   # seconds between sliding-window classifications
+# OFFLINE TEST: set to a .wav path to loop a file through the CNN instead of
+# opening the mic (no sounddevice/PortAudio needed). "" = use the live mic.
+ACOUSTIC_SOURCE_WAV   = ""
+
+# Acoustic signature gate (threshold backend; tune against YOUR drone + room).
 AMP_FLOOR    = 120             # min peak-to-peak amplitude to count as "loud"
 PITCH_BAND   = (1200, 4500)    # Hz window typical of a high prop-whine
 DETECT_HOLD  = 0.5             # seconds the signature must persist to fire
