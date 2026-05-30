@@ -3,13 +3,10 @@
 # Minimal core (the pipeline runs in MOCK mode with just this):
 pyserial>=3.5
 
-# Vision (DECIDE stage) - install when you wire the webcam + model:
-# opencv-python>=4.8
-# numpy>=1.24
-
-# On-device inference - install ONE of these for the .tflite payload model:
-# tflite-runtime         # lightweight, preferred on the Uno Q
-# tensorflow             # heavier; only if tflite-runtime is unavailable
+# Vision (DECIDE stage) - on-device, offline YOLOv8 drone detector:
+opencv-python>=4.8
+numpy>=1.24
+onnxruntime>=1.16
 
 # Optional: classify off the Uno Q's own webcam mic instead of the car mic
 # sounddevice>=0.4

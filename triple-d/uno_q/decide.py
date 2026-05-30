@@ -2,13 +2,13 @@
 
 Three signals are fused into one verdict:
   1. acoustic confidence   (from detect.AcousticDetector)
-  2. vision: drone present (VisionClassifier -> Roboflow hosted inference)
+  2. vision: drone present (VisionClassifier -> on-device YOLOv8 ONNX)
   3. closing behaviour     (ClosingTracker: distance falling + amplitude rising)
 
 Nothing here fires an effect. It only RECOMMENDS. The human (operator.py)
 authorizes before anything in defeat.py runs.
 """
-import base64
+import os
 from collections import deque
 from dataclasses import dataclass, field
 import time
@@ -16,15 +16,16 @@ import config
 
 try:
     import cv2
+    import numpy as np
     _HAVE_CV = True
 except ImportError:
     _HAVE_CV = False
 
 try:
-    import requests
-    _HAVE_REQUESTS = True
+    import onnxruntime as ort
+    _HAVE_ORT = True
 except ImportError:
-    _HAVE_REQUESTS = False
+    _HAVE_ORT = False
 
 
 @dataclass
@@ -62,83 +63,148 @@ class ClosingTracker:
 
 
 class VisionClassifier:
-    """Logitech webcam -> Roboflow drone detector.
+    """Logitech webcam -> on-device YOLOv8 ONNX drone detector.
 
-    Uses the hosted inference API for ahmedmohsen/drone-detection-new-peksv v3.
-    Returns ('drone', max_conf) when any detection clears the confidence
-    threshold, ('no_drone', 0.0) when the frame is clean, or ('unknown', 0.0)
-    when we can't get an answer (no key, no camera, network failure).
+    Runs 100% offline. Returns:
+      ('drone',    smoothed_conf) — drone seen in >= VOTE_MIN_HITS of last
+                                    VOTE_WINDOW frames (kills 1-frame FPs)
+      ('no_drone', best_conf)     — frame is clean (or only non-hostile classes)
+      ('unknown',  0.0)           — camera/model unavailable, fusion will ignore
+
     Falls back to MOCK when configured or when prerequisites are missing.
+    Exposes .last_detections for the demo overlay / debug print.
     """
     def __init__(self):
-        can_run = (_HAVE_CV and _HAVE_REQUESTS
-                   and bool(config.ROBOFLOW_API_KEY))
-        self.mock = config.MOCK_VISION or not can_run
+        self.mock = (config.MOCK_VISION
+                     or not (_HAVE_CV and _HAVE_ORT))
         self.cap = None
-        self._endpoint = (
-            f"{config.ROBOFLOW_URL}/{config.ROBOFLOW_MODEL}/"
-            f"{config.ROBOFLOW_VERSION}"
-        )
+        self.session = None
+        self._input_name = None
+        self.last_detections = []          # [{box, conf, cls}, ...]
+        self._vote_hist = deque(maxlen=config.VISION_VOTE_WINDOW)  # (hit, conf)
+
         if self.mock:
-            reason = "config" if config.MOCK_VISION else "missing deps/api key"
+            reason = "config" if config.MOCK_VISION else "missing deps"
             print(f"[decide] vision in MOCK mode ({reason}) "
                   f"-> '{config.MOCK_VISION_LABEL}'")
             return
+
+        model_path = config.ONNX_MODEL_PATH
+        if not os.path.isabs(model_path):
+            model_path = os.path.join(os.path.dirname(__file__), model_path)
+        if not os.path.exists(model_path):
+            print(f"[decide] no ONNX at {model_path}; falling back to MOCK "
+                  f"(train+export first)")
+            self.mock = True
+            return
+
         try:
             self.cap = cv2.VideoCapture(config.CAMERA_INDEX)
             if not self.cap.isOpened():
                 raise RuntimeError(f"camera {config.CAMERA_INDEX} not available")
-            print(f"[decide] vision online -> Roboflow "
-                  f"{config.ROBOFLOW_MODEL} v{config.ROBOFLOW_VERSION}")
+            self.session = ort.InferenceSession(
+                model_path, providers=["CPUExecutionProvider"]
+            )
+            self._input_name = self.session.get_inputs()[0].name
+            print(f"[decide] vision online -> {os.path.basename(model_path)} "
+                  f"(offline, classes={config.VISION_CLASS_NAMES})")
         except Exception as e:                       # noqa: BLE001
             print(f"[decide] vision init failed ({e}); falling back to MOCK")
             self.mock = True
 
     def classify(self):
-        """Return (label, confidence)."""
+        """Return (label, confidence). label in {'drone','no_drone','unknown'}."""
         if self.mock:
             return config.MOCK_VISION_LABEL, 0.80
         ok, frame = self.cap.read()
         if not ok:
             return "unknown", 0.0
+
         size = config.VISION_INPUT_SIZE
         img = cv2.resize(frame, (size, size))
-        ok, buf = cv2.imencode(".jpg", img)
-        if not ok:
-            return "unknown", 0.0
-        payload = base64.b64encode(buf.tobytes())
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+        tensor = np.transpose(img, (2, 0, 1))[None, ...]
+
         try:
-            resp = requests.post(
-                self._endpoint,
-                params={"api_key": config.ROBOFLOW_API_KEY},
-                data=payload,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-                timeout=config.ROBOFLOW_TIMEOUT_S,
-            )
-            resp.raise_for_status()
-            preds = resp.json().get("predictions", [])
+            outputs = self.session.run(None, {self._input_name: tensor})
         except Exception as e:                       # noqa: BLE001
-            print(f"[decide] roboflow call failed: {e}")
+            print(f"[decide] onnx run failed: {e}")
             return "unknown", 0.0
-        if not preds:
-            return "no_drone", 0.0
-        top = max(float(p.get("confidence", 0.0)) for p in preds)
-        if top < config.DRONE_CONF_THRESHOLD:
-            return "no_drone", top
-        return "drone", top
+
+        dets = _postprocess_yolo(
+            outputs[0],
+            conf_thresh=config.DRONE_CONF_THRESHOLD,
+            iou_thresh=config.DRONE_NMS_IOU,
+        )
+        self.last_detections = dets
+
+        # Only the HOSTILE_CLASS counts as a positive signal. Other classes
+        # (AirPlane, Helicopter) are visible exonerations -> no_drone.
+        hostile = [d for d in dets
+                   if config.VISION_CLASS_NAMES[d["cls"]] == config.HOSTILE_CLASS]
+        frame_hit_conf = max((d["conf"] for d in hostile), default=0.0)
+        self._vote_hist.append((bool(hostile), frame_hit_conf))
+
+        hits = sum(1 for h, _ in self._vote_hist if h)
+        if hits >= config.VISION_VOTE_MIN_HITS:
+            # smoothed confidence = mean conf of the hits in the window
+            avg = sum(c for h, c in self._vote_hist if h) / hits
+            return "drone", avg
+        if dets:
+            return "no_drone", max(d["conf"] for d in dets)
+        return "no_drone", 0.0
 
     def release(self):
         if self.cap is not None:
             self.cap.release()
 
 
+def _postprocess_yolo(output, conf_thresh: float, iou_thresh: float):
+    """YOLOv8 ONNX output decoder for the multi-class drone detector.
+
+    Accepts (1, 4+C, N) or (1, N, 4+C). Returns
+    [{box:[x1,y1,x2,y2], conf:float, cls:int}, ...] after conf filter + NMS.
+    """
+    arr = np.squeeze(output, axis=0)
+    if arr.shape[0] < arr.shape[1]:
+        arr = arr.T                          # -> (N, 4+C)
+    xywh = arr[:, :4]
+    class_scores = arr[:, 4:]
+    confs = class_scores.max(axis=1)
+    cls_ids = class_scores.argmax(axis=1)
+
+    mask = confs >= conf_thresh
+    if not mask.any():
+        return []
+    xywh = xywh[mask]; confs = confs[mask]; cls_ids = cls_ids[mask]
+
+    xy = xywh[:, :2]; wh = xywh[:, 2:]
+    xyxy = np.concatenate([xy - wh / 2, xy + wh / 2], axis=1)
+
+    nms_in = np.stack([
+        xyxy[:, 0], xyxy[:, 1],
+        xyxy[:, 2] - xyxy[:, 0], xyxy[:, 3] - xyxy[:, 1],
+    ], axis=1)
+    keep = cv2.dnn.NMSBoxes(nms_in.tolist(), confs.tolist(),
+                            conf_thresh, iou_thresh)
+    if len(keep) == 0:
+        return []
+    keep = np.array(keep).flatten()
+    return [
+        {"box": xyxy[i].astype(int).tolist(),
+         "conf": float(confs[i]),
+         "cls": int(cls_ids[i])}
+        for i in keep
+    ]
+
+
 def assess(acoustic_conf: float, vision_label: str, vision_conf: float,
            closing: bool) -> Verdict:
     """Weighted fusion -> Verdict. Tune the weights to taste.
 
-    vision_label is the Roboflow drone-detection result:
+    vision_label is the on-device drone-detection result:
       'drone'    -> visual confirmation, strong positive weight
-      'no_drone' -> frame is clean, small negative weight
+      'no_drone' -> frame is clean (or only AirPlane/Helicopter), small neg
       'unknown'  -> vision channel unavailable, ignored
     """
     reasons = []
@@ -150,12 +216,18 @@ def assess(acoustic_conf: float, vision_label: str, vision_conf: float,
 
     if vision_label == "drone":
         score += 0.40 * vision_conf
-        reasons.append(f"vision confirms drone (conf {vision_conf:.2f})")
+        reasons.append(f"vision: drone confirmed across frames "
+                       f"(avg conf {vision_conf:.2f})")
     elif vision_label == "no_drone":
-        score -= 0.20
-        reasons.append("vision sees no drone in frame")
+        # only a soft negative — vision is one signal, not a gate
+        score -= 0.10
+        if vision_conf > 0:
+            reasons.append(f"vision: non-hostile object seen "
+                           f"(conf {vision_conf:.2f})")
+        else:
+            reasons.append("vision: frame clean")
     else:
-        reasons.append("vision channel unavailable")
+        reasons.append("vision: channel unavailable")
 
     if closing:
         score += 0.30
