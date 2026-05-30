@@ -63,16 +63,12 @@ class ClosingTracker:
 
 
 class VisionClassifier:
-    """Logitech webcam -> on-device YOLOv8 ONNX drone detector.
+    """Logitech webcam -> payload class. Falls back to mock if no model/cam.
 
-    Runs 100% offline. Returns:
-      ('drone',    smoothed_conf) — drone seen in >= VOTE_MIN_HITS of last
-                                    VOTE_WINDOW frames (kills 1-frame FPs)
-      ('no_drone', best_conf)     — frame is clean (or only non-hostile classes)
-      ('unknown',  0.0)           — camera/model unavailable, fusion will ignore
-
-    Falls back to MOCK when configured or when prerequisites are missing.
-    Exposes .last_detections for the demo overlay / debug print.
+    The vision model stays DORMANT until activate() is called. That activation
+    is the signal raised by the listening model (DETECT) the instant it judges
+    a threat -- only then do we power up the camera and load the classifier.
+    While IDLE the webcam stays dark and no inference runs.
     """
     def __init__(self):
         self.mock = (config.MOCK_VISION
@@ -83,6 +79,7 @@ class VisionClassifier:
         self.last_detections = []          # [{box, conf, cls}, ...]
         self._vote_hist = deque(maxlen=config.VISION_VOTE_WINDOW)  # (hit, conf)
 
+        self.active = False
         if self.mock:
             reason = "config" if config.MOCK_VISION else "missing deps"
             print(f"[decide] vision in MOCK mode ({reason}) "
@@ -96,7 +93,17 @@ class VisionClassifier:
             print(f"[decide] no ONNX at {model_path}; falling back to MOCK "
                   f"(train+export first)")
             self.mock = True
-            return
+
+    def activate(self):
+        """Wake the vision model. Called when the listening model signals a
+        threat. Idempotent -- repeated signals while already active are no-ops.
+        Returns True if the model is ready (live or mock)."""
+        if self.active:
+            return True
+        self.active = True
+        print("[decide] >> VISION ACTIVATED (signalled by acoustic threat)")
+        if self.mock:
+            return True
 
         try:
             self.cap = cv2.VideoCapture(config.CAMERA_INDEX)
@@ -111,9 +118,23 @@ class VisionClassifier:
         except Exception as e:                       # noqa: BLE001
             print(f"[decide] vision init failed ({e}); falling back to MOCK")
             self.mock = True
+        return True
+
+    def deactivate(self):
+        """Stand the vision model back down (e.g. on cooldown): release the
+        camera so the webcam goes dark again until the next threat signal."""
+        if not self.active:
+            return
+        if self.cap is not None:
+            self.cap.release()
+            self.cap = None
+        self.active = False
+        print("[decide] vision stood down")
 
     def classify(self):
-        """Return (label, confidence). label in {'drone','no_drone','unknown'}."""
+        """Return (label, confidence). Dormant until activated."""
+        if not self.active:
+            return "unknown", 0.0
         if self.mock:
             return config.MOCK_VISION_LABEL, 0.80
         ok, frame = self.cap.read()

@@ -15,7 +15,7 @@ MOCK_SERIAL = True
 # ---------------------------------------------------------------------- CAMERA
 CAMERA_INDEX     = 0           # Logitech webcam on the Uno Q (via the USB hub)
 # MOCK_VISION=True skips the camera/model and uses MOCK_VISION_LABEL below.
-MOCK_VISION       = True
+MOCK_VISION = True
 MOCK_VISION_LABEL = "drone"             # what the fake classifier "sees"
 
 # ------------------------------------------------------- ON-DEVICE DRONE MODEL
@@ -32,7 +32,23 @@ DRONE_CONF_THRESHOLD = 0.60             # min per-box confidence to count as a h
 DRONE_NMS_IOU        = 0.45             # NMS overlap threshold
 
 # ------------------------------------------------------------ DETECT THRESHOLDS
-# Acoustic signature gate (tune against YOUR drone + room).
+# Two DETECT backends:
+#   USE_CNN_DETECT=False -> threshold/debounce on the car-mic amp/pitch features
+#                           (detect.AcousticDetector). Works in MOCK_SERIAL mode.
+#   USE_CNN_DETECT=True  -> Mel-spectrogram CNN on the Uno Q's OWN mic, in
+#                           sliding windows (acoustic_cnn.CnnAcousticDetector).
+#                           Needs a real mic + torch/librosa/sounddevice.
+USE_CNN_DETECT = True
+
+# CNN backend (only used when USE_CNN_DETECT=True)
+ACOUSTIC_MODEL_PATH   = "models/drone_acoustic_cnn.pth"
+ACOUSTIC_THRESHOLD    = 0.40   # P(threat) to count as signature (lower=more sensitive)
+ACOUSTIC_INFER_PERIOD = 0.30   # seconds between sliding-window classifications
+# OFFLINE TEST: set to a .wav path to loop a file through the CNN instead of
+# opening the mic (no sounddevice/PortAudio needed). "" = use the live mic.
+ACOUSTIC_SOURCE_WAV = ""
+
+# Acoustic signature gate (threshold backend; tune against YOUR drone + room).
 AMP_FLOOR    = 120             # min peak-to-peak amplitude to count as "loud"
 PITCH_BAND   = (1200, 4500)    # Hz window typical of a high prop-whine
 DETECT_HOLD  = 0.5             # seconds the signature must persist to fire

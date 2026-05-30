@@ -8,6 +8,8 @@ opencv-python>=4.8
 numpy>=1.24
 onnxruntime>=1.16
 
-# Optional: classify off the Uno Q's own webcam mic instead of the car mic
-# sounddevice>=0.4
-# librosa>=0.10
+# DETECT off the Uno Q's OWN mic with the trained CNN (USE_CNN_DETECT=True):
+# sounddevice>=0.4     # mic capture (needs PortAudio: apt install libportaudio2)
+# librosa>=0.10        # Mel-spectrogram
+# torch>=2.0           # runs drone_acoustic_cnn.pth (CPU build is fine)
+#   -> see acoustic_cnn.py; model file in models/drone_acoustic_cnn.pth
