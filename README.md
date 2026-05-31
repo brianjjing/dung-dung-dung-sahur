@@ -14,43 +14,51 @@
 Layered, non-kinetic defense against RF-silent (fiber-optic) suicide drones.
 **Pipeline:** `DETECT → DECIDE → DEFEAT`. **Heads:** `DISTRACT · DISABLE · DEFEND`.
 
-This is one system across two brains — a thin C firmware on the car and a
-Python brain on the Arduino Uno Q. **One repo, two folders.**
+The brain runs on a **Mac** (camera + mic over USB); the car is an Arduino
+**UNO R4 WiFi** on the Elegoo chassis that drives the motors and fires effects,
+taking one-letter commands from the Mac over **Wi-Fi**. **One repo, two folders.**
 
 > **Authors:** Brian Jing · Mikey Nguyen · Victor Lopez · Kevin Pyo
 
 ```
 triple-d/
-├── uno_r3/triple_d_car/triple_d_car.ino   # flash once; runs forever
-└── uno_q/                                  # python main.py; the brain
-    ├── main.py        # state machine (IDLE→DECIDING→AUTHORIZING→DEFEATING→COOLDOWN)
-    ├── config.py      # ALL tunables, mock flags, the autonomy dial
-    ├── comms.py       # serial link + scripted mock telemetry
-    ├── detect.py      # DETECT  (acoustic, from the car's mic features)
-    ├── decide.py      # DECIDE  (vision + closing-behavior + fusion)
-    ├── operator.py    # human-in-the-loop authorization
-    ├── defeat.py      # DEFEAT  (sends effect commands to the car)
-    └── models/        # drop trained .tflite here
+├── uno_r3/triple_d_car/triple_d_car.ino   # LEGACY: USB-serial R3 prototype (see Legacy below)
+└── uno_q/                                  # python main.py; the brain (runs on the Mac)
+    ├── main.py         # state machine (IDLE→DECIDING→IDENTIFYING→DEFEATING→COOLDOWN)
+    ├── config.py       # ALL tunables, mock flags, the autonomy dial
+    ├── car_client.py   # car control over Wi-Fi to the UNO R4 (deploy_decoy, etc.)
+    ├── comms.py        # serial telemetry link + scripted mock telemetry
+    ├── detect.py       # DETECT  (acoustic, from mic features)
+    ├── decide.py       # DECIDE  (vision + closing-behavior + fusion)
+    ├── iff.py          # IDENTIFY (autonomous friend-or-foe challenge)
+    ├── defeat.py       # DEFEAT  (fires effects; DECOY → R4 distract over Wi-Fi)
+    ├── frontend/ui.py  # live operator dashboard (stdlib HTTP + canvas HUD)
+    └── models/         # trained detector weights
 ```
 
 ## Architecture
 ```
-[UNO R3 on car]  --- USB serial --->  [Uno Q : Python/Linux]
-  mic features (amp,pitch)             DETECT  acoustic gate
-  ultrasonic distance                  DECIDE  webcam ML + fusion
-  drives motors                        OPERATOR human authorizes
-  fires LED / IR / relay effects       DEFEAT  picks heads, sends commands
+[Logitech cam + mic] --USB--> [Mac : Python brain] --Wi-Fi--> [UNO R4 WiFi on car]
+                               DETECT  acoustic gate            command server :5050
+                               DECIDE  webcam ML + fusion       drives Elegoo motors
+                               IDENTIFY autonomous IFF          fires effects (distract)
+                               DEFEAT  picks heads, sends cmds  (car battery powers motors)
 ```
-The car never decides anything. All intelligence is Python on the Uno Q.
+The car never decides anything. All intelligence is Python on the Mac; the car
+is a Wi-Fi actuator.
 
-## Serial protocol (115200 baud, newline-terminated ASCII)
+## Car control (Wi-Fi)
+The UNO R4 WiFi runs a tiny TCP command server on the car. The Mac talks to it
+through [`car_client.py`](triple-d/uno_q/car_client.py) — no USB cable to the car.
 ```
-UP   (car -> Uno Q):  TEL,AMP:512,PITCH:2200,DIST:84,LINE:0
-DOWN (Uno Q -> car):  CMD,DISTRACT_ON   (also: DISTRACT_OFF, DAZZLE_ON/OFF,
-                                          DRIVE_F/B/L/R/S, ALL_OFF, IDLE)
+Mac -> R4 (TCP 192.168.1.90:5050):  one ASCII letter per command
+   F = forward   B = backward   L = left   R = right   S = stop   D = distract
 ```
-Human-readable on purpose: open a serial monitor and you can read the whole
-conversation while debugging.
+The AI pipeline only ever calls `car_client.deploy_decoy()` (the DISTRACT
+action); it knows nothing about motors. Test the car alone with:
+```bash
+python car_client.py     # car battery ON + R4 on Wi-Fi -> car moves + distract
+```
 
 ## Run it RIGHT NOW (no hardware)
 ```bash
@@ -59,31 +67,40 @@ pip install pyserial
 python main.py
 ```
 `config.MOCK_SERIAL = True` synthesizes a scripted threat ~3s in. You'll watch
-DETECT fire, a HOSTILE verdict appear, an authorization prompt (press `y`), and
-the DEFEAT commands print. This is your skeleton working end-to-end.
+DETECT fire, a drone get confirmed, the autonomous IFF challenge resolve to FOE,
+and the DEFEAT commands print. This is your skeleton working end-to-end, with no
+car on Wi-Fi.
 
 ## Bring-up plan (flip one thing on at a time)
-1. **Mock pipeline** — as above. Prove the state machine + authorization.
-2. **Serial round-trip** — flash `triple_d_car.ino`, set `MOCK_SERIAL = False`,
-   set `SERIAL_PORT`. Confirm real `TEL,...` lines arrive and `CMD,...` lands.
+1. **Mock pipeline** — as above. Prove the state machine end to end.
+2. **Car link** — power the car battery, confirm the UNO R4 is on Wi-Fi at its
+   IP, then `python car_client.py`. The car should drive and run distract mode.
 3. **Acoustic** — point your drone-noise source at the mic; tune `AMP_FLOOR`
    and `PITCH_BAND` until DETECT is reliable.
-4. **Vision** — train the Teachable-Machine model (see `models/README.md`),
-   set `MOCK_VISION = False`.
-5. **Effects** — wire decoy LEDs / IR array / relay-heater to the car pins and
-   verify each `CMD` actuates.
+4. **Vision** — set `MOCK_VISION = False` and confirm the webcam (`CAMERA_INDEX`)
+   detects a drone.
+5. **Effects** — confirm a FOE verdict drives the car's DISTRACT (`deploy_decoy`)
+   over Wi-Fi.
 6. **Tune fusion + autonomy level**, then rehearse the demo.
 
-## Wiring notes (verify against YOUR hardware)
-- Pins in the `.ino` are **placeholders** — match them to your wiring or, if
-  using the ELEGOO V4 shield, replace the `drive*()` bodies with ELEGOO's
-  motor library calls.
-- The Uno Q has a single USB-C port — power + webcam go through the multiport
-  adapter; power the car-mounted Uno Q from a USB-C battery bank.
-- Acoustic features are extracted on the UNO via amplitude + zero-crossing
-  pitch (no library). `analogRead` limits usable pitch to a couple kHz — enough
-  to separate prop-whine from ambient. Upgrade to ArduinoFFT/Goertzel for a
-  sharper spectrum.
+## Hardware notes
+- **Car:** UNO R4 WiFi on the Elegoo chassis. It controls the motors directly
+  and exposes the `F/B/L/R/S/D` command server; the **car battery must be ON**
+  for the wheels to move. Its IP/port live in `car_client.py` (`R4_IP`, `PORT`).
+- **Mac peripherals:** the Logitech camera + mic connect to the Mac over USB
+  (`CAMERA_ID = 0` / `cv2.VideoCapture(0)`); the mic is read by the acoustic
+  stage. No USB cable runs from the Mac to the car anymore.
+
+## Legacy: UNO R3 serial prototype
+The original car used a USB-serial **UNO R3** (`uno_r3/triple_d_car.ino`) that
+streamed `TEL,...` telemetry up and took `CMD,...` actions down at 115200 baud.
+That bridge has been **replaced** by the UNO R4 WiFi link above; the sketch and
+the serial protocol are kept here only for reference.
+```
+UP   (car -> brain):  TEL,AMP:512,PITCH:2200,DIST:84,LINE:0
+DOWN (brain -> car):  CMD,DISTRACT_ON  (also DISTRACT_OFF, DAZZLE_ON/OFF,
+                                         DRIVE_F/B/L/R/S, ALL_OFF, IDLE)
+```
 
 ## Degrees of autonomy (the dial in `config.AUTONOMY_LEVEL`)
 | L | Behavior | Who fires |
@@ -105,5 +122,3 @@ asks a human first.** That split (L4) is the responsible-autonomy story.
 - **DISABLE** = defeat the seeker (IR dazzle), not "disarm the bomb."
 - **One mic = detection, not bearing.** Direction-finding needs multiple nodes.
 - Always rehearse with **L0 teleop** available as a fallback.
-```
-```
