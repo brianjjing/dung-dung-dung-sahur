@@ -202,60 +202,111 @@ class TripleD:
 
     # ---- UI publishing ------------------------------------------------------
 
-    _UI_MODE = {
-        State.IDLE:        "listening",
-        State.DECIDING:    "searching",
-        State.IDENTIFYING: "tracking",
-        State.DEFEATING:   "tracking",
-        State.COOLDOWN:    "tracking",   # hold the verdict view until re-armed
-    }
-
-    def _norm_xy(self, xy):
-        """Image-plane (0..VISION_INPUT_SIZE) point -> normalised [0,1] grid."""
-        if xy is None:
-            return None
-        s = float(config.VISION_INPUT_SIZE)
-        return [max(0.0, min(1.0, xy[0] / s)),
-                max(0.0, min(1.0, xy[1] / s))]
-
-    def _drone_xy(self):
-        """Normalised drone position from the latest vision detection, or None
-        (mock/no detection) -> the dashboard simulates a moving track."""
+    def _grid_xy(self):
+        """Latest drone centroid -> normalised grid coords (-1..1, unit centered),
+        or None when there is no live detection."""
         dets = self.vision.last_detections
         if not dets:
             return None
         best = max(dets, key=lambda d: d["conf"])
         x1, y1, x2, y2 = best["box"]
-        return self._norm_xy(((x1 + x2) / 2.0, (y1 + y2) / 2.0))
+        s = float(config.VISION_INPUT_SIZE)
+        cx = (x1 + x2) / 2.0 / s
+        cy = (y1 + y2) / 2.0 / s
+        return {"x": max(-1.0, min(1.0, cx * 2 - 1)),
+                "y": max(-1.0, min(1.0, cy * 2 - 1))}
 
     def _publish(self, telem):
+        """Build the published state contract (the same shape the offline
+        mock_server.py serves) from the brain's live signals, and hand it to the
+        dashboard. Monitoring-only: nothing here actuates anything."""
         telem = telem or {}
-        now = time.time()
-        engaging = self.engaging
-        laser_xy = (self._norm_xy(self.aim.cutoff_xy)
-                    if engaging and self.aim is not None and self.aim.available
-                    else None)
-        self.dash.update(
-            mode=self._UI_MODE.get(self.state, "listening"),
-            raw_state=self.state.value,
-            amp=telem.get("amp", 0),
-            pitch=telem.get("pitch", 0),
-            dist=telem.get("dist", -1),
-            acoustic_conf=self.detector.confidence,
-            search_remaining=(max(0.0, self.decide_deadline - now)
-                              if self.state is State.DECIDING else 0.0),
-            search_total=config.VISION_DECIDE_TIMEOUT_S,
-            iff=self.iff_status,
-            overlay=self.overlay,
-            engaging=engaging,
-            drone_xy=self._drone_xy(),
-            laser_xy=laser_xy,
-            decoy_xy=None,           # placeholder offset; UI sims it if None
-            # Camera window is live exactly while vision is awake: it turns on
-            # when acoustic noise wakes vision and goes dark when the 1.5s watch
-            # expires or the contact is no longer being tracked.
-            camera_on=self.vision.active,
-        )
+        s = float(config.VISION_INPUT_SIZE)
+
+        # --- acoustic / mic ---
+        amp_raw = telem.get("amp", 0) or 0
+        amp_n = max(0.0, min(1.0, amp_raw / 450.0))
+        acoustic = float(self.detector.confidence or 0.0)
+
+        # --- vision vote + smoothed confidence ---
+        vh = list(getattr(self.vision, "_vote_hist", []))
+        vote_hits = sum(1 for h, _ in vh if h)
+        hit_confs = [c for h, c in vh if h]
+        vis_conf = (sum(hit_confs) / len(hit_confs)) if hit_confs else 0.0
+
+        closing = self.closing.is_closing()
+        tracking = self.state in (State.IDENTIFYING, State.DEFEATING, State.COOLDOWN)
+
+        # --- threat score (verdict once we have one; else a low live estimate) ---
+        if tracking and self.verdict is not None:
+            score = float(self.verdict.score)
+        elif self.state is State.DECIDING:
+            score = round(min(1.0, 0.30 * acoustic + 0.20), 2)
+        else:
+            score = round(min(1.0, 0.30 * acoustic), 2)
+
+        # --- contact ---
+        grid = self._grid_xy()
+        has_contact = tracking and (grid is not None or self.iff_status is not None)
+        contact = None
+        if has_contact:
+            iff = {"friendly": "friend", "foe": "foe"}.get(self.iff_status, "unknown")
+            heading_deg = None
+            aim = self.aim
+            if aim is not None and aim.available:
+                heading_deg = (aim.heading_deg + 90.0) % 360.0   # image-plane -> compass
+            trail = [{"x": max(-1.0, min(1.0, p[1] / s * 2 - 1)),
+                      "y": max(-1.0, min(1.0, p[2] / s * 2 - 1))}
+                     for p in getattr(self.trajectory, "pts", [])]
+            contact = {
+                "iff": iff,
+                "grid": grid or {"x": 0.0, "y": 0.0},
+                "heading_deg": heading_deg,
+                "trail": trail,
+                "vote": {"hits": vote_hits, "window": config.VISION_VOTE_WINDOW},
+            }
+
+        # --- defeat (only on a FOE verdict; non-kinetic distract + laser track) ---
+        foe = (self.iff_status == "foe")
+        engaging = bool(self.engaging and foe)
+        laser_aim, sweep = None, 0.0
+        if engaging and self.aim is not None and self.aim.available:
+            cx, cy = self.aim.cutoff_xy
+            laser_aim = [max(-1.0, min(1.0, cx / s * 2 - 1)),
+                         max(-1.0, min(1.0, cy / s * 2 - 1))]
+            sweep = float(self.aim.sweep_deg)
+
+        vision_ok = not getattr(self.vision, "mock", False)
+        dist = telem.get("dist", -1)
+
+        contract = {
+            "mode": "mock" if getattr(config, "MOCK_SERIAL", False) else "live",
+            "state": self.state.value,
+            "link": {"serial": "up" if telem else "down",
+                     "baud": getattr(config, "BAUD", 115200)},
+            "health": {"vision_model": vision_ok, "acoustic_model": True,
+                       "mic": True, "camera": vision_ok},
+            "sensors": {
+                "mic": {"amplitude": round(amp_n, 3),
+                        "confidence": round(acoustic, 3),
+                        "waveform": None},       # dashboard renders a live level trace
+                "camera": {"awake": bool(self.vision.active), "stream": "/cam.mjpeg"},
+                "distance_cm": (dist if (dist is not None and dist >= 0) else None),
+            },
+            "threat": {
+                "score": round(score, 3),
+                "threshold": getattr(config, "SCORE_HOSTILE", 0.60),
+                "closing": bool(closing),
+                "components": {"sound": round(min(1.0, acoustic), 3),
+                               "camera": round(min(1.0, vis_conf), 3),
+                               "closing": 1.0 if closing else 0.0},
+            },
+            "contact": contact,
+            "defeat": {"active": engaging, "decoy": engaging,
+                       "laser": {"active": engaging, "aim": laser_aim,
+                                 "sweep_deg": sweep}},
+        }
+        self.dash.publish(contract)
 
     def _status(self, telem, note):
         if telem is None:
