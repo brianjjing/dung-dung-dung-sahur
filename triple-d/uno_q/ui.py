@@ -214,6 +214,10 @@ let trail = [];                     // recent drone positions (normalised)
 let lastHeading = -Math.PI/2;
 let wasTracking = false;            // to reset the track when tracking begins
 let trackStart = 0;
+let wasEngaging = false;            // freeze the laser cut on the first engage frame
+let cutPoint = null;                // frozen {x,y} cut position (does NOT chase the drone)
+let cutHeading = 0;                 // frozen heading at the cut, orients the saw line
+let activeDecoyIdx = -1;            // which decoy the drone's position cued (frozen at engage)
 
 const C = {
   bg:'#05070a', grid:'#0c2a24', gridHot:'#103a31',
@@ -231,11 +235,29 @@ function nToScreen(nx, ny){
   return [gridRect.x + nx*gridRect.w, gridRect.y + ny*gridRect.h];
 }
 
+// Fixed decoy emitters scattered across the ground (bird's-eye). The one
+// nearest the tracked drone is the node that fires.
+const DECOYS = [
+  [0.15,0.20],[0.84,0.16],[0.27,0.83],
+  [0.73,0.80],[0.63,0.34],[0.11,0.60]
+];
+function decoyXY(i){ return nToScreen(DECOYS[i][0], DECOYS[i][1]); }
+function nearestDecoy(nx, ny){
+  let best = -1, bd = Infinity;
+  for(let i=0;i<DECOYS.length;i++){
+    const d = Math.hypot(nx-DECOYS[i][0], ny-DECOYS[i][1]);
+    if(d < bd){ bd = d; best = i; }
+  }
+  return best;
+}
+
 // Right-hand column reserved for the camera (top) + mic (bottom) so they sit
 // beside the grid instead of on top of it. The grid shrinks to its left.
 function rightPanel(){
   const pad = Math.min(W,H)*0.035;
-  const w = clamp(W*0.22, 230*DPR, 340*DPR);
+  // square side for the camera + mic boxes; narrower than before so the grid
+  // reclaims the freed width
+  const w = clamp(W*0.155, 200*DPR, 270*DPR);
   return {pad, w, x: W - w - pad, left: W - w - pad*2};
 }
 
@@ -267,27 +289,39 @@ function simulateDrone(now){
   };
 }
 
-function drawDecoy(now, active){
-  // decoy lives at a fixed position every time; deactivated unless engaging
-  const dc = state.decoy_xy ? {x:state.decoy_xy[0], y:state.decoy_xy[1]}
-                            : {x:0.80, y:0.22};
-  const [cxp,cyp] = nToScreen(dc.x, dc.y);
-  if(active){
-    const db = 0.5 + 0.5*Math.sin(now/160);
-    ctx.save(); ctx.globalAlpha = db;
-    glowDot(cxp, cyp, 7*DPR, C.yellow, 22);
-    textC('DECOY', cxp, cyp-18*DPR, 12, C.yellow);
-    ctx.restore();
-  } else {
-    // deactivated: dim hollow marker, no glow
+function drawDecoys(now, activeIdx){
+  // the whole scattered field of decoy nodes in STANDBY; the active one is
+  // drawn separately as a big flash, so skip it here.
+  for(let i=0;i<DECOYS.length;i++){
+    if(i === activeIdx) continue;
+    const [cxp,cyp] = decoyXY(i);
     ctx.save();
-    ctx.strokeStyle = C.grey; ctx.lineWidth = 1.5*DPR;
-    ctx.beginPath(); ctx.arc(cxp, cyp, 6*DPR, 0, Math.PI*2); ctx.stroke();
-    ctx.fillStyle = 'rgba(58,74,82,0.5)';
-    ctx.beginPath(); ctx.arc(cxp, cyp, 2.5*DPR, 0, Math.PI*2); ctx.fill();
-    textC('DECOY · STANDBY', cxp, cyp-16*DPR, 10, C.grey);
+    ctx.strokeStyle = 'rgba(90,122,134,0.55)'; ctx.lineWidth = 1.3*DPR;
+    ctx.beginPath(); ctx.arc(cxp, cyp, 5*DPR, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = 'rgba(90,122,134,0.6)';
+    ctx.beginPath(); ctx.arc(cxp, cyp, 2*DPR, 0, Math.PI*2); ctx.fill();
+    textC('DECOY', cxp, cyp-13*DPR, 9, C.dim);
     ctx.restore();
   }
+}
+
+function drawDecoyFlash(now, i){
+  // the cued decoy goes off with a big bloom: expanding shockwave rings plus a
+  // white-hot core, much larger than the standby marker.
+  const [cxp,cyp] = decoyXY(i);
+  ctx.save();
+  for(let k=0;k<3;k++){
+    const ph = ((now/650) + k/3) % 1;
+    const rr = (12 + ph*64)*DPR;
+    ctx.strokeStyle = `rgba(255,225,77,${(1-ph)*0.7})`;
+    ctx.lineWidth = 3*DPR;
+    ctx.beginPath(); ctx.arc(cxp, cyp, rr, 0, Math.PI*2); ctx.stroke();
+  }
+  ctx.restore();
+  const fl = 0.55 + 0.45*Math.sin(now/110);
+  glowDot(cxp, cyp, (15+fl*9)*DPR, C.yellow, 52);   // big yellow bloom
+  glowDot(cxp, cyp, 5*DPR, '#fffdf0', 30);          // white-hot center
+  textC('DECOY ACTIVATED', cxp, cyp-30*DPR, 13, C.yellow);
 }
 
 function drawGrid(now){
@@ -296,36 +330,73 @@ function drawGrid(now){
   // grid spans from the left margin up to (but not under) the right-hand panel
   gridRect = {x:m, y:m+H*0.06, w:(p.left - m*0.4) - m, h:H-2*m-H*0.06};
 
-  // flat black grid
+  // ---- graph landscape -----------------------------------------------------
   ctx.fillStyle = '#02110d';
   ctx.fillRect(gridRect.x, gridRect.y, gridRect.w, gridRect.h);
-  ctx.strokeStyle = C.grid; ctx.lineWidth = 1*DPR;
+
   const N = 16;
+  // fine lattice
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 1*DPR;
   for(let i=0;i<=N;i++){
     const gxp = gridRect.x + gridRect.w*i/N;
     const gyp = gridRect.y + gridRect.h*i/N;
     ctx.beginPath(); ctx.moveTo(gxp, gridRect.y); ctx.lineTo(gxp, gridRect.y+gridRect.h); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(gridRect.x, gyp); ctx.lineTo(gridRect.x+gridRect.w, gyp); ctx.stroke();
   }
-  ctx.strokeStyle = C.gridHot; ctx.lineWidth = 1.5*DPR;
-  ctx.strokeRect(gridRect.x, gridRect.y, gridRect.w, gridRect.h);
+  // major lattice every 4 cells, a touch brighter
+  ctx.strokeStyle = C.gridHot; ctx.lineWidth = 1*DPR;
+  for(let i=0;i<=N;i+=4){
+    const gxp = gridRect.x + gridRect.w*i/N;
+    const gyp = gridRect.y + gridRect.h*i/N;
+    ctx.beginPath(); ctx.moveTo(gxp, gridRect.y); ctx.lineTo(gxp, gridRect.y+gridRect.h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gridRect.x, gyp); ctx.lineTo(gridRect.x+gridRect.w, gyp); ctx.stroke();
+  }
+  // graph NODES at every major intersection -- the techy lattice landscape
+  ctx.fillStyle = 'rgba(57,214,255,0.22)';
+  for(let i=0;i<=N;i+=4){
+    for(let j=0;j<=N;j+=4){
+      const nx = gridRect.x + gridRect.w*i/N;
+      const ny = gridRect.y + gridRect.h*j/N;
+      ctx.beginPath(); ctx.arc(nx, ny, 1.7*DPR, 0, Math.PI*2); ctx.fill();
+    }
+  }
 
   // the protected asset / emitter sits at the centre of the grid
   const [ex, ey] = nToScreen(0.5, 0.5);
+  // range rings around the asset: a distance reference radiating outward
+  ctx.save();
+  ctx.setLineDash([2*DPR, 6*DPR]);
+  ctx.strokeStyle = 'rgba(57,214,255,0.13)'; ctx.lineWidth = 1*DPR;
+  const ringMax = Math.min(gridRect.w, gridRect.h)*0.5;
+  for(let k=1;k<=3;k++){
+    ctx.beginPath(); ctx.arc(ex, ey, ringMax*k/3.2, 0, Math.PI*2); ctx.stroke();
+  }
+  ctx.restore();
+
+  // hot border framing the field
+  ctx.strokeStyle = C.gridHot; ctx.lineWidth = 1.5*DPR;
+  ctx.strokeRect(gridRect.x, gridRect.y, gridRect.w, gridRect.h);
+
+  // asset rendered as a clear ringed node
+  ctx.save();
+  ctx.strokeStyle = 'rgba(57,214,255,0.5)'; ctx.lineWidth = 1.2*DPR;
+  ctx.beginPath(); ctx.arc(ex, ey, 10*DPR, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
   glowDot(ex, ey, 5*DPR, C.cyan, 16);
-  textC('TRIPLE-D', ex, ey-16*DPR, 11, C.dim);
+  textC('TRIPLE-D', ex, ey-18*DPR, 11, C.cyan);
 
   const tracking = state.mode === 'tracking';
   const friendly = state.iff === 'friendly';
   const engaging = state.engaging && !friendly;
 
-  // decoy is always present; only ACTIVE while engaging a foe
-  drawDecoy(now, engaging);
+  // the scattered decoy field is always present; the cued one flashes later
+  drawDecoys(now, engaging ? activeDecoyIdx : -1);
 
   if(!tracking){
-    // nothing detected -> empty grid (decoy already drawn, deactivated)
+    // nothing detected -> empty grid (decoy field already drawn, all standby)
     trail = [];
-    textC('NO CONTACT', gridRect.x+gridRect.w*0.5, gridRect.y+gridRect.h*0.72,
+    cutPoint = null; wasEngaging = false; activeDecoyIdx = -1;   // clear frozen state
+    textC('Nothing detected yet', gridRect.x+gridRect.w*0.5, gridRect.y+gridRect.h*0.72,
           16, 'rgba(90,122,134,0.5)');
     return;
   }
@@ -334,7 +405,11 @@ function drawGrid(now){
   const droneColor = friendly ? C.green : C.red;
   let dn = state.drone_xy ? {x:state.drone_xy[0], y:state.drone_xy[1]}
                           : simulateDrone(now);
-  trail.push(dn); if(trail.length>60) trail.shift();
+  // Keep the ENTIRE flown path on screen (no cap, nothing shifted off). Only
+  // record a point once the drone has actually moved, so a near-stationary
+  // contact doesn't pile up thousands of duplicate points.
+  const lastPt = trail[trail.length-1];
+  if(!lastPt || Math.hypot(dn.x-lastPt.x, dn.y-lastPt.y) > 0.004) trail.push(dn);
 
   // GENERAL DIRECTION: heading fitted over the whole track (first -> last),
   // so it reflects the straight-line path rather than per-frame jitter.
@@ -344,72 +419,165 @@ function drawGrid(now){
       lastHeading = Math.atan2(b.y-a.y, b.x-a.x);
   }
 
-  // fading trail
-  for(let i=0;i<trail.length;i++){
-    const p = trail[i], [px,py] = nToScreen(p.x,p.y);
-    const a = i/trail.length;
-    ctx.fillStyle = `rgba(${friendly?'57,255,139':'255,59,78'},${a*0.4})`;
-    ctx.beginPath(); ctx.arc(px,py, 2*DPR + a*3*DPR, 0, Math.PI*2); ctx.fill();
+  // FIBER-OPTIC TETHER: the thin fiber the drone trails along its flown path.
+  // The recorded track is drawn as one connected filament -- bright at the
+  // drone, fading down its length -- then continued faintly past the oldest
+  // sample toward the grid edge, implying the cable runs back to the launcher.
+  // It is what the laser cut point (placed behind the drone) severs.
+  if(trail.length >= 2){
+    const fib = '255,255,255';                        // the whole tether is white
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.shadowColor = `rgba(${fib},0.5)`; ctx.shadowBlur = 5*DPR;
+    // One continuous filament: the WHOLE recorded path stays solid white (no
+    // fade-out along its length), thickening only slightly toward the drone so
+    // the direction of travel still reads.
+    for(let i=1;i<trail.length;i++){
+      const [ax,ay] = nToScreen(trail[i-1].x, trail[i-1].y);
+      const [bx,by] = nToScreen(trail[i].x,   trail[i].y);
+      const a = i/trail.length;                       // 0 at tail -> 1 at drone
+      ctx.strokeStyle = `rgba(${fib},0.9)`;
+      ctx.lineWidth = (1.2 + a*1.2)*DPR;
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+    }
+    // The bulk of the tether: a straight run-back from the oldest sample to the
+    // grid edge, opposite the flight heading -- the cable laid down on the way
+    // in, continuing off-grid to the launcher. Drawn solid (just dimmer than the
+    // recorded curve) so the fiber reads as one continuous line behind the drone.
+    const t0 = trail[0];
+    const back = lastHeading + Math.PI;                 // opposite the travel direction
+    const bx = Math.cos(back), by = Math.sin(back);
+    // distance from t0 along (bx,by) until it leaves the [0,1] grid
+    let s = Infinity;
+    if(bx >  1e-6) s = Math.min(s, (1 - t0.x) / bx);
+    else if(bx < -1e-6) s = Math.min(s, (0 - t0.x) / bx);
+    if(by >  1e-6) s = Math.min(s, (1 - t0.y) / by);
+    else if(by < -1e-6) s = Math.min(s, (0 - t0.y) / by);
+    s = isFinite(s) ? Math.max(0, s) : 0;
+    const ex = t0.x + bx*s, ey = t0.y + by*s;
+    const [t0x,t0y] = nToScreen(t0.x, t0.y);
+    const [exx,eyy] = nToScreen(ex, ey);
+    const g = ctx.createLinearGradient(t0x,t0y, exx,eyy);
+    g.addColorStop(0, `rgba(${fib},0.42)`);             // continues the curve's tail
+    g.addColorStop(1, `rgba(${fib},0.14)`);             // fading off toward the edge
+    ctx.strokeStyle = g; ctx.lineWidth = 1.1*DPR;
+    ctx.beginPath(); ctx.moveTo(t0x,t0y); ctx.lineTo(exx,eyy); ctx.stroke();
+    ctx.restore();
+    // label the run-back, set off the line so it stays clear of the drone marker
+    if(s > 0.18){
+      const mx = t0.x + bx*s*0.45, my = t0.y + by*s*0.45;
+      const [lx,ly] = nToScreen(mx, my);
+      textC('FIBER-OPTIC TETHER', lx, ly - 13*DPR, 9, `rgba(${fib},0.7)`);
+    }
   }
 
   const [dx,dy] = nToScreen(dn.x, dn.y);
   const rgb = friendly ? '57,255,139' : '255,59,78';
 
-  // projected straight-line path: where the drone is generally headed, mapped
-  // forward across the grid as a dashed lane with an arrowhead.
+  // HEADING: one short, bold arrow off the nose of the drone marking the
+  // direction of travel -- not a full-grid projection lane.
   {
-    const proj = 0.55;     // normalised look-ahead distance
-    const hx = clamp(dn.x + Math.cos(lastHeading)*proj, 0, 1);
-    const hy = clamp(dn.y + Math.sin(lastHeading)*proj, 0, 1);
-    const [hxp, hyp] = nToScreen(hx, hy);
+    const len = 30*DPR;                              // short, fixed length
+    const sx = dx + Math.cos(lastHeading)*11*DPR;    // start just off the marker
+    const sy = dy + Math.sin(lastHeading)*11*DPR;
+    const hxp = dx + Math.cos(lastHeading)*len;
+    const hyp = dy + Math.sin(lastHeading)*len;
     ctx.save();
-    ctx.strokeStyle = `rgba(${rgb},0.30)`; ctx.lineWidth = 1.5*DPR;
-    ctx.setLineDash([6*DPR, 7*DPR]);
-    ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(hxp, hyp); ctx.stroke();
-    ctx.setLineDash([]);
-    // arrowhead at the projected end
-    const ah = 8*DPR;
-    ctx.fillStyle = `rgba(${rgb},0.45)`;
+    ctx.strokeStyle = `rgba(${rgb},0.95)`; ctx.lineCap = 'round';
+    ctx.lineWidth = 3.5*DPR;
+    ctx.shadowColor = `rgba(${rgb},0.85)`; ctx.shadowBlur = 6*DPR;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(hxp, hyp); ctx.stroke();
+    // bold filled arrowhead
+    const ah = 10*DPR;
+    ctx.fillStyle = `rgba(${rgb},0.95)`;
     ctx.translate(hxp, hyp); ctx.rotate(lastHeading);
-    ctx.beginPath(); ctx.moveTo(0,0);
-    ctx.lineTo(-ah, -ah*0.5); ctx.lineTo(-ah, ah*0.5);
+    ctx.beginPath(); ctx.moveTo(3*DPR, 0);
+    ctx.lineTo(-ah, -ah*0.62); ctx.lineTo(-ah, ah*0.62);
     ctx.closePath(); ctx.fill();
     ctx.restore();
-    textC('HEADING', (dx+hxp)/2, (dy+hyp)/2 - 12*DPR, 10, C.dim);
   }
 
   if(engaging){
-    // laser CUT POINT: behind the drone along its heading (where the trailing
-    // fiber-optic tether runs), swept PERPENDICULAR to the flight path.
-    const [ex2, ey2] = nToScreen(0.5, 0.5);
-    let lp;
-    if(state.laser_xy){ lp = {x:state.laser_xy[0], y:state.laser_xy[1]}; }
-    else { lp = { x: clamp(dn.x - Math.cos(lastHeading)*0.10,0,1),
-                  y: clamp(dn.y - Math.sin(lastHeading)*0.10,0,1) }; }
-    const [lx,ly] = nToScreen(lp.x, lp.y);
+    // LASER CUT: locked to where the firing solution was FIRST generated. The
+    // beam runs from the Triple-D emitter to that fixed point and stays there
+    // instead of chasing the drone -- the cut point and its orientation are
+    // frozen on the first engage frame.
+    if(!wasEngaging || !cutPoint){
+      // base cut point: the backend solution if present, else just behind the drone
+      let bx, by;
+      if(state.laser_xy){ bx = state.laser_xy[0]; by = state.laser_xy[1]; }
+      else { bx = dn.x - Math.cos(lastHeading)*0.10;
+             by = dn.y - Math.sin(lastHeading)*0.10; }
+      // nudge it a little FORWARD along the heading so the cut sits just inside
+      // where the trailing fiber begins, instead of behind it
+      const fwd = 0.06;
+      cutPoint = { x: clamp(bx + Math.cos(lastHeading)*fwd, 0, 1),
+                   y: clamp(by + Math.sin(lastHeading)*fwd, 0, 1) };
+      cutHeading = lastHeading;
+      // the drone's position picks which decoy fires (frozen so it doesn't
+      // flicker between decoys as the drone moves)
+      activeDecoyIdx = nearestDecoy(dn.x, dn.y);
+    }
+    const [ex2, ey2] = nToScreen(0.5, 0.5);                  // Triple-D emitter
+    const [lx,ly]    = nToScreen(cutPoint.x, cutPoint.y);    // fixed cut point
+    const perp = cutHeading + Math.PI/2;                     // across the fiber tether
+    const sl = Math.min(gridRect.w, gridRect.h)*0.06;
+
     const flick = 0.5 + 0.5*Math.sin(now/40);
     ctx.save();
-    ctx.globalAlpha = 0.4 + 0.6*flick;
     ctx.strokeStyle = C.red; ctx.shadowColor = C.red; ctx.shadowBlur = 18*DPR;
-    // beam from the emitter to the cut point
+    // anchored beam: emitter -> fixed cut point (does not move with the drone)
+    ctx.globalAlpha = 0.4 + 0.6*flick;
     ctx.lineWidth = 2.5*DPR;
     ctx.beginPath(); ctx.moveTo(ex2,ey2); ctx.lineTo(lx,ly); ctx.stroke();
-    // perpendicular sweep across the flight path at the cut point
-    const perp = lastHeading + Math.PI/2;
-    const sl = Math.min(gridRect.w, gridRect.h)*0.06;
-    ctx.lineWidth = 3.5*DPR;
+    // the cut span: a faint static line perpendicular to the fiber, marking the
+    // stroke the laser works across.
+    ctx.globalAlpha = 0.22;
+    ctx.lineWidth = 1.5*DPR;
     ctx.beginPath();
     ctx.moveTo(lx + Math.cos(perp)*sl, ly + Math.sin(perp)*sl);
     ctx.lineTo(lx - Math.cos(perp)*sl, ly - Math.sin(perp)*sl);
     ctx.stroke();
     ctx.restore();
+
+    // cutting head: a bright blade sawing BACK AND FORTH along that perpendicular
+    // line -- the in-place motion that signifies the laser severing the fiber.
+    const saw = Math.sin(now/90);                            // -1..1, back and forth
+    const hx = lx + Math.cos(perp)*sl*saw;
+    const hy = ly + Math.sin(perp)*sl*saw;
+    const blade = sl*0.30;
+    ctx.save();
+    ctx.strokeStyle = C.red; ctx.shadowColor = C.red; ctx.shadowBlur = 22*DPR;
+    ctx.lineWidth = 3.5*DPR; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(hx + Math.cos(perp)*blade, hy + Math.sin(perp)*blade);
+    ctx.lineTo(hx - Math.cos(perp)*blade, hy - Math.sin(perp)*blade);
+    ctx.stroke();
+    ctx.restore();
+    glowDot(hx, hy, 4*DPR, C.red, 20);                       // hot point at the cut
+
     glowDot(lx, ly, 6*DPR, C.red, 20);
     textC('LASER · CUT', lx, ly-16*DPR, 11, C.red);
+
+    // tasking link: which decoy the drone's position has cued, then its flash
+    if(activeDecoyIdx >= 0){
+      const [adx,ady] = decoyXY(activeDecoyIdx);
+      ctx.save();
+      ctx.setLineDash([4*DPR, 5*DPR]);
+      ctx.strokeStyle = 'rgba(255,225,77,0.45)'; ctx.lineWidth = 1.3*DPR;
+      ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(adx, ady); ctx.stroke();
+      ctx.restore();
+      drawDecoyFlash(now, activeDecoyIdx);
+    }
   }
 
   // the drone itself
   glowDot(dx, dy, 8*DPR, droneColor, 26);
   textC(friendly ? 'FRIENDLY' : 'ENEMY', dx, dy-18*DPR, 12, droneColor);
+  // live grid reference of the target, reinforcing the GPS read
+  const gref = 'E' + String(Math.round(dn.x*100)).padStart(2,'0')
+             + ' · N' + String(Math.round((1-dn.y)*100)).padStart(2,'0');
+  textC(gref, dx, dy+18*DPR, 9, C.dim);
 
   // overlay banner (top-centre, clear of the top-right camera window)
   const txt = state.overlay ||
@@ -418,8 +586,13 @@ function drawGrid(now){
   const col = friendly ? C.green : C.red;
   ctx.save();
   ctx.globalAlpha = friendly ? 1 : (0.7 + 0.3*Math.sin(now/240));
-  textC(txt, W*0.5, H*0.07, 24, col);
+  // keep the banner clear of the (now taller) top bar on short viewports
+  textC(txt, W*0.5, Math.max(H*0.085, 104*DPR), 24, col);
   ctx.restore();
+
+  // drop the frozen cut solution + cued decoy once we're no longer engaging a foe
+  if(!engaging){ cutPoint = null; activeDecoyIdx = -1; }
+  wasEngaging = engaging;
 }
 
 // ===========================================================================
@@ -439,17 +612,22 @@ function drawSyntheticFeed(x, y, w, h, now){
     ctx.beginPath(); ctx.moveTo(x, y+h*i/6); ctx.lineTo(x+w, y+h*i/6); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(x+w*i/6, y); ctx.lineTo(x+w*i/6, y+h); ctx.stroke();
   }
-  // sweeping scanline
-  const sy = y + ((now/16) % h);
-  ctx.strokeStyle = 'rgba(57,255,139,0.35)'; ctx.lineWidth = 2*DPR;
-  ctx.beginPath(); ctx.moveTo(x, sy); ctx.lineTo(x+w, sy); ctx.stroke();
+  // sweeping scanline -- only while the camera is actually active, so a STANDBY
+  // window doesn't show a moving green line
+  if(active){
+    const sy = y + ((now/16) % h);
+    ctx.strokeStyle = 'rgba(57,255,139,0.35)'; ctx.lineWidth = 2*DPR;
+    ctx.beginPath(); ctx.moveTo(x, sy); ctx.lineTo(x+w, sy); ctx.stroke();
+  }
 }
 
 function drawCamera(now){
   const p = rightPanel();
   const w = p.w;
   const h = w*0.60;
-  const x = p.x, y = p.pad + 30*DPR;   // leave room for the alert banner
+  // frame top (drawn at y-22) sits flush with the detection grid's top edge,
+  // so the camera window starts within the grid's height range.
+  const x = p.x, y = gridRect.y + 22*DPR;
 
   // picked up = vision woke on acoustic noise (searching) or a confirmed track
   const picked = state.camera_on || state.mode !== 'listening';
@@ -506,8 +684,11 @@ function drawCamera(now){
   if(tracking){
     ctx.strokeRect(cx-rl, cy-rl, rl*2, rl*2);
     textC('LOCK', cx, cy+rl+12*DPR, 11, rc);
+  } else if(picked){
+    textC('ACQUIRING…', cx, cy+rl+12*DPR, 11, rc);
   } else {
-    textC(picked ? 'ACQUIRING…' : 'STANDBY', cx, cy+rl+12*DPR, 11, rc);
+    textC('STANDBY', cx, cy+rl+12*DPR, 11, rc);
+    textC('ACTIVATES WHEN DRONE IS HEARD', cx, cy+rl+26*DPR, 9, C.dim);
   }
   ctx.restore();
   ctx.restore();
@@ -519,7 +700,9 @@ function drawCamera(now){
 function drawMic(now){
   const p = rightPanel();
   const bw = p.w, bh = bw*0.80;
-  const x = p.x, y = H - bh - p.pad - 30*DPR;  // sit above the status bar
+  // frame bottom (y+bh) sits flush with the detection grid's bottom edge, so
+  // the mic panel ends within the grid's height range.
+  const x = p.x, y = gridRect.y + gridRect.h - bh;
 
   const ampN = clamp(state.amp/450, 0, 1);
   ampS = lerp(ampS, ampN, 0.22);
@@ -605,6 +788,72 @@ function statusBar(){
         W-16*DPR, H-13*DPR, 12, C.dim, 'right');
 }
 
+// ===========================================================================
+// LOGO + TOP BAR : the brand line across the top, same tactical language as the
+// rest of the page -- a corner-bracket targeting reticle around a three-dot
+// triad (Detect - Decide - Defeat), beside a tracked TRIPLE-D wordmark.
+// ===========================================================================
+function drawLogo(cx, cy, s, now){
+  const half = s/2;
+  const bl = s*0.30;                 // bracket leg length
+  ctx.save();
+  // breathing glow keeps the mark alive without drawing attention
+  const pulse = 0.78 + 0.22*Math.sin(now/1400);
+  ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.5*DPR; ctx.lineCap = 'round';
+  ctx.shadowColor = C.cyan; ctx.shadowBlur = 6*DPR;
+  ctx.globalAlpha = pulse;
+  const corners = [[-1,-1],[1,-1],[-1,1],[1,1]];
+  for(const [sx, sy] of corners){
+    const ox = sx*half, oy = sy*half;
+    ctx.beginPath();
+    ctx.moveTo(cx+ox, cy+oy - sy*bl);
+    ctx.lineTo(cx+ox, cy+oy);
+    ctx.lineTo(cx+ox - sx*bl, cy+oy);
+    ctx.stroke();
+  }
+  // three dots in a triad -> Detect - Decide - Defeat
+  const r = s*0.28;
+  const triad = [[0, -r], [-r*0.92, r*0.58], [r*0.92, r*0.58]];
+  ctx.globalAlpha = 1;
+  for(const [ox, oy] of triad) glowDot(cx+ox, cy+oy, 2.3*DPR, C.cyan, 9);
+  ctx.restore();
+}
+
+function topBar(now){
+  // taller bar so the wordmark has real breathing room above and below it,
+  // instead of being pinned against the hairline.
+  const h = 75*DPR, pad = 22*DPR, cy = h/2;
+  // backing + hairline divider, same tactical language as the bottom status bar
+  ctx.fillStyle = 'rgba(8,14,18,0.85)';
+  ctx.fillRect(0, 0, W, h);
+  ctx.strokeStyle = '#13343a'; ctx.lineWidth = 1*DPR;
+  ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(W, h); ctx.stroke();
+
+  // logo mark: left edge, vertically centred in the padded bar
+  drawLogo(pad + 10*DPR, cy, 20*DPR, now);
+
+  // TRIPLE-D wordmark, tracked, centred in the bar with a soft cyan glow.
+  // Nudged left by half the tracking so the trailing letter-space doesn't
+  // push the word optically right of dead centre.
+  const track = 4*DPR;
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '600 ' + (17*DPR) + 'px "SF Mono",ui-monospace,Menlo,monospace';
+  ctx.letterSpacing = track + 'px';
+  ctx.shadowColor = C.cyan; ctx.shadowBlur = 8*DPR;
+  ctx.fillStyle = C.cyan;
+  ctx.fillText('TRIPLE-D', W/2 - track/2, cy);
+  ctx.letterSpacing = '0px';
+  ctx.restore();
+
+  // right side: quiet subtitle, balances the bar without repeating the footer
+  ctx.save();
+  ctx.letterSpacing = (2*DPR) + 'px';
+  textC('OPERATOR DASHBOARD', W - pad, cy, 11, C.dim, 'right');
+  ctx.letterSpacing = '0px';
+  ctx.restore();
+}
+
 function frame(now){
   const tracking = state.mode === 'tracking';
   if(tracking && !wasTracking){ trail = []; trackStart = now; }
@@ -615,6 +864,7 @@ function frame(now){
   drawCamera(now);                   // camera window: on screen the whole time
   drawMic(now);                      // mic indicator: bottom-right, always on
   statusBar();
+  topBar(now);                       // brand line: top, always on
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

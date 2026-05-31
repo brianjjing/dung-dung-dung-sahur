@@ -36,23 +36,36 @@ def parse_telemetry(line: str):
 
 class _MockScenario:
     """Quietly idles, then ~3s in, ramps a closing high-pitched threat so you
-    can watch DETECT -> DECIDE -> DEFEAT fire end to end with no car."""
+    can watch DETECT -> DECIDE -> DEFEAT fire end to end with no car.
+
+    The scenario REPEATS on a fixed cycle so the pipeline can be exercised over
+    and over: detect a threat, re-arm, then detect the next one. The trailing
+    quiet stretch is long enough for COOLDOWN_S to expire and the brain to
+    return to IDLE before the next threat ramps in."""
+
+    QUIET_S  = 3.0       # quiet room before a threat appears
+    THREAT_S = 6.0       # threat approaches; whine rises and it closes in
+    REARM_S  = 6.0       # quiet stretch after the threat: lets COOLDOWN clear
+    CYCLE_S  = QUIET_S + THREAT_S + REARM_S
+
     def __init__(self):
         self.t0 = time.time()
 
     def telemetry(self):
-        t = time.time() - self.t0
-        if t < 3.0:                      # quiet room
+        # phase within the current cycle, so the whole quiet->threat->quiet
+        # sequence loops indefinitely instead of firing exactly once.
+        phase = (time.time() - self.t0) % self.CYCLE_S
+        if phase < self.QUIET_S:                         # quiet room
             return {"amp": 30, "pitch": 300, "dist": 200, "line": 0}
-        elif t < 9.0:                    # threat approaches, whine rises
-            prog = (t - 3.0) / 6.0
+        elif phase < self.QUIET_S + self.THREAT_S:       # threat approaches
+            prog = (phase - self.QUIET_S) / self.THREAT_S
             return {
                 "amp":   int(40 + prog * 400),
                 "pitch": int(800 + prog * 2600),
                 "dist":  int(180 - prog * 150),
                 "line":  0,
             }
-        else:                            # threat has passed / been handled
+        else:                                            # threat handled; re-arm
             return {"amp": 30, "pitch": 300, "dist": 200, "line": 0}
 
 

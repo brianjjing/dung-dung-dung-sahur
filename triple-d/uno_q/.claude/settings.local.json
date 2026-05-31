@@ -32,7 +32,44 @@
       "Bash(grep -av '^$')",
       "Bash(awk 'NR>=14 && NR<=22 {printf \"%d| %s\\\\n\", NR, $0}')",
       "Bash(echo \"exit=$?\")",
-      "Bash(node --check /tmp/_ui.js)"
+      "Bash(node --check /tmp/_ui.js)",
+      "Bash(git *)",
+      "Bash(awk NR>=58 *)",
+      "Bash(python3 -c \"import sounddevice; print\\('sounddevice OK'\\)\")",
+      "Bash(python3 -c \"import librosa; print\\('librosa OK'\\)\")",
+      "Bash(python3 -c \"import torch; print\\('torch OK'\\)\")",
+      "Bash(python3 -c \"import sounddevice as sd; print\\(sd.query_devices\\(\\)\\)\")",
+      "Bash(node *)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --hide-scrollbars --force-device-scale-factor=1 --window-size=1440,900 --screenshot=/tmp/ddd_standby.png --virtual-time-budget=1200 /tmp/ddd_preview.html)",
+      "Bash(echo \"exit:$?\")",
+      "Read(//tmp/**)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --hide-scrollbars --force-device-scale-factor=1 --window-size=1440,900 --screenshot=/tmp/ddd_fiber.png --virtual-time-budget=9000 /tmp/ddd_fiber.html)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --hide-scrollbars --force-device-scale-factor=1 --window-size=1440,900 --screenshot=/tmp/ddd_fiber2.png --virtual-time-budget=5500 /tmp/ddd_fiber2.html)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --hide-scrollbars --force-device-scale-factor=1 --window-size=1440,900 --screenshot=/tmp/ddd_fiber3.png --virtual-time-budget=6000 /tmp/ddd_fiber3.html)",
+      "Read(//Users/brian/Downloads/triple-d/triple-d/**)",
+      "Read(//Users/brian/Downloads/triple-d/**)",
+      "Bash('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless --disable-gpu --hide-scrollbars --window-size=1440,900 --force-device-scale-factor=1 --virtual-time-budget=2500 --screenshot=/tmp/dash_shot.png http://127.0.0.1:8099/)",
+      "Bash(echo \"exit=$? ; bytes=$\\(stat -f%z /tmp/dash_shot.png 2>/dev/null\\)\")",
+      "Bash(pkill -f dash_preview.py)",
+      "Bash(rm -f /tmp/dash_preview.py /tmp/dash_shot.png)",
+      "Bash(sed -i '' 's/\"laser_xy\":\\\\[0.5,0.5\\\\]/\"laser_xy\":[0.56,0.44]/' /tmp/dash_preview.py)",
+      "Bash(python3 /tmp/dash_preview.py)",
+      "Bash('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless --disable-gpu --hide-scrollbars --window-size=1440,900 --force-device-scale-factor=1 --virtual-time-budget=2500 --screenshot=/tmp/dash_engage.png http://127.0.0.1:8099/)",
+      "Bash(echo \"exit=$? bytes=$\\(stat -f%z /tmp/dash_engage.png 2>/dev/null\\)\")",
+      "Bash(python3 /tmp/dash_preview.py idle)",
+      "Bash('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless --disable-gpu --hide-scrollbars --window-size=1440,900 --force-device-scale-factor=1 --virtual-time-budget=2000 --screenshot=/tmp/dash_idle.png http://127.0.0.1:8099/)",
+      "Bash(echo \"idle exit=$? bytes=$\\(stat -f%z /tmp/dash_idle.png 2>/dev/null\\)\")"
     ]
+  },
+  "enabledPlugins": {
+    "impeccable@impeccable": true
+  },
+  "extraKnownMarketplaces": {
+    "impeccable": {
+      "source": {
+        "source": "github",
+        "repo": "pbakaus/impeccable"
+      }
+    }
   }
 }
