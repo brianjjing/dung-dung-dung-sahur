@@ -97,6 +97,15 @@ AUTONOMY_LEVEL = 2
 AUTH_TIMEOUT_S = 8.0           # how long to wait for a human y/n before aborting
 USE_JOYSTICK   = False         # True -> Modulino Joystick; False -> keyboard
 
+# ------------------------------------------------------------------- L3 TUNING
+# These only apply when running autonomy.py (AUTONOMY_LEVEL = 3).
+VETO_WINDOW_S    = 5.0         # seconds the veto window stays open before auto-fire
+MIN_VETO_S       = 1.5         # minimum hold before operator early-fire is respected
+                               # (prevents accidental fire from a stray Enter keystroke)
+AUDIT_LOG_PATH   = "triple_d_audit.jsonl"  # JSONL record of all operator decisions
+USE_COLOR        = True        # ANSI colour in the veto-window UI; set False for logs
+JOYSTICK_I2C_BUS = 1           # Linux I2C bus number for the Modulino Joystick
+
 # ----------------------------------------------------------------------- TIMING
 LOOP_HZ      = 20              # main control-loop rate
 COOLDOWN_S   = 4.0            # after a response, how long before re-arming
