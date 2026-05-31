@@ -1,24 +1,18 @@
 """Central configuration for the Uno Q brain.
 
-Every tunable lives here so you are not hunting through modules at 3am.
-Start in MOCK mode (no hardware), prove the pipeline, then flip flags off
-one at a time as real hardware/models come online.
+Deployed for real hardware on the Arduino Uno Q: live mic, USB camera,
+serial link to the car UNO R3, and IFF transceiver on a second serial port.
 """
 
 # ----------------------------------------------------------------- SERIAL LINK
-SERIAL_PORT = "/dev/ttyACM0"   # the UNO R3 (often ttyACM0; sometimes ttyUSB0)
+SERIAL_PORT = "/dev/ttyACM0"   # UNO R3 on the car (ttyACM0 or ttyUSB0 on Linux)
 BAUD        = 115200
-# MOCK_SERIAL=True synthesizes a scripted threat so you can run the whole
-# DETECT->DECIDE->DEFEAT pipeline on a laptop with NO car attached.
-MOCK_SERIAL = True
+MOCK_SERIAL = False
 
 # ---------------------------------------------------------------------- CAMERA
-CAMERA_INDEX     = 0           # Logitech webcam on the Uno Q (via the USB hub)
-# MOCK_VISION=True skips the camera/model and uses MOCK_VISION_LABEL below.
-# False -> run the real drone_detector.onnx on the webcam (auto-falls back to
-# MOCK if cv2/onnxruntime/model/camera are missing).
-MOCK_VISION = False
-MOCK_VISION_LABEL = "drone"             # what the fake classifier "sees"
+CAMERA_INDEX     = 1           # USB webcam on the Uno Q (via the USB hub)
+MOCK_VISION      = False
+MOCK_VISION_LABEL = "drone"    # unused when MOCK_VISION=False
 
 # ------------------------------------------------------- ON-DEVICE DRONE MODEL
 # Local YOLOv8 ONNX detector. Trained from the Roboflow Universe
@@ -34,23 +28,17 @@ DRONE_CONF_THRESHOLD = 0.60             # min per-box confidence to count as a h
 DRONE_NMS_IOU        = 0.45             # NMS overlap threshold
 
 # ------------------------------------------------------------ DETECT THRESHOLDS
-# Two DETECT backends:
-#   USE_CNN_DETECT=False -> threshold/debounce on the car-mic amp/pitch features
-#                           (detect.AcousticDetector). Works in MOCK_SERIAL mode.
-#   USE_CNN_DETECT=True  -> Mel-spectrogram CNN on the Uno Q's OWN mic, in
-#                           sliding windows (acoustic_cnn.CnnAcousticDetector).
-#                           Needs a real mic + torch/librosa/sounddevice.
+# USE_CNN_DETECT=True -> Mel-spectrogram CNN on the Uno Q mic (acoustic_cnn.py).
+# USE_CNN_DETECT=False -> amp/pitch gate from the car UNO R3 telemetry.
 USE_CNN_DETECT = True
 
 # CNN backend (only used when USE_CNN_DETECT=True)
 ACOUSTIC_MODEL_PATH   = "models/drone_acoustic_cnn.pth"
 ACOUSTIC_THRESHOLD    = 0.40   # P(threat) to count as signature (lower=more sensitive)
 ACOUSTIC_INFER_PERIOD = 0.30   # seconds between sliding-window classifications
-# OFFLINE TEST: set to a .wav path to loop a file through the CNN instead of
-# opening the mic (no sounddevice/PortAudio needed). "" = use the live mic.
-ACOUSTIC_SOURCE_WAV = ""
+ACOUSTIC_SOURCE_WAV   = ""     # "" = live mic on the Uno Q
 
-# Acoustic signature gate (threshold backend; tune against YOUR drone + room).
+# Acoustic signature gate (threshold backend; only used when USE_CNN_DETECT=False)
 AMP_FLOOR    = 120             # min peak-to-peak amplitude to count as "loud"
 PITCH_BAND   = (1200, 4500)    # Hz window typical of a high prop-whine
 DETECT_HOLD  = 0.5             # seconds the signature must persist to fire
@@ -64,18 +52,14 @@ SCORE_HOSTILE       = 0.60     # fused score at/above this => HOSTILE verdict
 VISION_DECIDE_TIMEOUT_S = 1.5
 
 # ---------------------------------------------------- AUTONOMOUS IFF (friend/foe)
-# Once vision confirms a drone, Triple D decides defend-vs-stand-down ON ITS OWN
-# (no human) by challenging the contact for a predefined shared key. A friendly
-# drone is a second Arduino Uno preloaded with the same secret; it answers the
-# challenge and Triple D stands down. Anything that can't present the key is a
-# FOE -> autonomous DEFEAT (see iff.py).
+# Once vision confirms a drone, Triple D challenges the contact for a shared key.
+# A friendly drone (second Arduino Uno with the same secret) answers; anything
+# else is treated as a FOE -> autonomous DEFEAT (see iff.py).
 IFF_SHARED_SECRET       = "triple-d-shared-key-2025"  # preloaded on the friendly Uno
 IFF_CHALLENGE_TIMEOUT_S = 1.0     # wait this long for the contact to present the key
-# MOCK_IFF=True synthesizes the contact's reply (no second Uno on the wire) so the
-# whole decision path runs on a laptop. MOCK_IFF_FRIENDLY toggles its answer.
-MOCK_IFF          = True
-MOCK_IFF_FRIENDLY = False         # True -> simulated drone knows the key (stand down)
-IFF_PORT          = "/dev/ttyACM1"  # transceiver to the drone (real mode only)
+MOCK_IFF          = False
+MOCK_IFF_FRIENDLY = False         # only used when MOCK_IFF=True
+IFF_PORT          = "/dev/ttyACM1"  # serial transceiver to the friendly/foe drone
 IFF_BAUD          = 115200
 
 # ------------------------------------------------------- AUTONOMOUS DEFEAT (foe)
@@ -87,7 +71,7 @@ LASER_CUTOFF_BACK_PX = 60        # how far BEHIND the drone (image px) to place 
 
 # ----------------------------------------------------------------- AUTONOMY DIAL
 # Legacy human-gate dial (kept for human.py / autonomy.py). The post-detection
-# defend decision is now AUTONOMOUS via IFF and no longer consults this dial.
+# defend decision is AUTONOMOUS via IFF and no longer consults this dial.
 # 0 teleop | 1 single-action assist | 2 detect+recommend, human gates ALL
 # 3 human-on-the-loop (acts, human can veto) | 4 auto-DISTRACT only, gate rest
 # 5 multi-agent (swarm hand-off)   --- see README "Degrees of autonomy"

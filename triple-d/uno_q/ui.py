@@ -601,7 +601,7 @@ function drawGrid(now){
 // quiet STANDBY look; once acoustic noise wakes the vision model a blinking
 // "NOISE DETECTED…" banner appears above it and the frame goes hot.
 // ===========================================================================
-function drawSyntheticFeed(x, y, w, h, now){
+function drawSyntheticFeed(x, y, w, h, now, active){
   // dark "sensor" backdrop
   const g = ctx.createLinearGradient(x, y, x, y+h);
   g.addColorStop(0, '#06121a'); g.addColorStop(1, '#03090d');
@@ -670,7 +670,7 @@ function drawCamera(now){
     if(ir > rr){ dh = h; dw = h*ir; } else { dw = w; dh = w/ir; }
     ctx.drawImage(camImg, x+(w-dw)/2, y+(h-dh)/2, dw, dh);
   } else {
-    drawSyntheticFeed(x, y, w, h, now);
+    drawSyntheticFeed(x, y, w, h, now, picked);
   }
   // centre reticle
   const cx = x+w/2, cy = y+h/2, rl = Math.min(w,h)*0.12;
@@ -721,7 +721,7 @@ function drawMic(now){
   ctx.strokeRect(x, y, bw, bh);
   ctx.restore();
 
-  const cx = x + bw*0.5, cy = y + bh*0.46;
+  const cx = x + bw*0.5, cy = y + bh*0.36;
 
   // 1) label ABOVE the microphone
   textC(picked ? 'NOISE DETECTED' : 'LISTENING', cx, y + bh*0.12, 14, micCol);
@@ -738,7 +738,7 @@ function drawMic(now){
   // 2) microphone glyph — POPS in size with the incoming sound level
   ctx.save();
   ctx.translate(cx, cy);
-  const s = DPR*0.40*(1 + ampS*0.7);   // base size grows with amplitude
+  const s = DPR*0.36*(1 + ampS*0.5);   // base size grows with amplitude
   ctx.shadowColor = micCol; ctx.shadowBlur = (6+ampS*32)*DPR;
   ctx.strokeStyle = micCol; ctx.fillStyle = `rgba(${micRGB},0.14)`;
   ctx.lineWidth = 3*s;
