@@ -237,11 +237,23 @@
     color:var(--ddd-red); font-size:15px; letter-spacing:4px; display:none; text-align:center;}
   .stale-tag.on{display:block;}
   .stale-tag small{display:block; font-size:9.5px; letter-spacing:2px; color:#9fb0c0; margin-top:7px;}
+  /* pre-connect: muted, not alarm-red — this is not a link failure yet */
+  .stale.connecting{box-shadow:inset 0 0 0 3px var(--ddd-muted);}
+  .stale-tag.connecting{border-color:var(--ddd-muted); color:var(--ddd-muted);}
   body.linkdown .clock,body.linkdown .score,body.linkdown .mic-amp{opacity:.4;}
 
   @keyframes blink{50%{opacity:0;}}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
   .stale-badge{color:var(--ddd-red)!important;}
+
+  /* honor reduced-motion: silence the purely-decorative loops (REC blink,
+     lock/stale pulse). State-bearing canvas motion (laser, sweep, track
+     trail) is unaffected — it encodes live pipeline state, not decoration. */
+  @media (prefers-reduced-motion: reduce){
+    .rec .dot{animation:none;}
+    .lockbox{animation:none;}
+    .stale.on{animation:none;}
+  }
 </style>
 </head>
 <body>
@@ -534,9 +546,18 @@
   let lastLogLen = -1, lastLogSig = '';
   function renderDOM(){
     const down = isLinkDown();
+    // Before the first successful fetch this is a cold start, not a dropped
+    // link — show a calm CONNECTING state instead of the red LINK DOWN alarm.
+    const connecting = !everConnected;
     document.body.classList.toggle('linkdown', down);
-    $('staleFrame').classList.toggle('on', down);
-    $('staleTag').classList.toggle('on', down);
+    const sf = $('staleFrame'), st = $('staleTag');
+    sf.classList.toggle('on', down);
+    st.classList.toggle('on', down);
+    sf.classList.toggle('connecting', connecting);
+    st.classList.toggle('connecting', connecting);
+    st.innerHTML = connecting
+      ? 'CONNECTING<small>ESTABLISHING TELEMETRY LINK…</small>'
+      : 'LINK DOWN<small>NO TELEMETRY — LAST DATA STALE</small>';
 
     const state = get(DATA,'state','IDLE') || 'IDLE';
     const accent = accentFor(state);
@@ -623,12 +644,11 @@
       pip.classList.add('live');
       pipMsg.style.display = (camErr || !camWanted) ? 'flex' : 'none';
       if(camErr) pipMsg.innerHTML = 'NO FEED<small>STREAM UNAVAILABLE</small>';
-      pipRec.style.visibility='visible'; pipCam.textContent='CAM-01 · '+(isFoe?'OPTICAL':'OPTICAL');
+      pipRec.style.visibility='visible'; pipCam.textContent='CAM-01 · OPTICAL';
       reticle.style.display = isFoe ? 'none' : 'block';
       lockbox.style.display = isFoe ? 'block' : 'none';
       lockLabel.style.display = isFoe ? 'block' : 'none';
       reticle.style.borderColor = accent;
-      reticle.querySelectorAll && void 0;
     }else{
       pip.classList.remove('live'); pipMsg.style.display='flex';
       pipMsg.innerHTML = 'ASLEEP<small>WAKES ON ACOUSTIC CONTACT</small>';
@@ -641,11 +661,9 @@
       reticle.style.display='none'; lockbox.style.display='none';
     }
 
-    // ---- engagement policy (offline check reflects real health) ----
-    const polItems = document.querySelectorAll('.pol-item');
-    // FULLY OFFLINE is always true (no external calls by construction)
-    // toggle nothing off here except to reflect degraded posture honestly:
-    polItems[2].classList.remove('off'); // FULLY OFFLINE
+    // ---- engagement policy ----
+    // All four assurances hold by construction (offline, non-kinetic, human-on-
+    // the-loop, audit-logged), so the policy panel is static — nothing to toggle.
 
     // ---- decision log (newest at bottom) ----
     const log = get(DATA,'log',[]) || [];
@@ -677,7 +695,9 @@
 
     // ---- status bar ----
     const serialUp = get(DATA,'link.serial','') !== 'down' && !down;
-    setField('Link', serialUp ? COL.green : COL.red, serialUp ? ('SERIAL UP'+(get(DATA,'link.baud',null)?'':'')) : 'SERIAL DOWN');
+    const baud = get(DATA,'link.baud',null);
+    setField('Link', serialUp ? COL.green : COL.red,
+             serialUp ? ('SERIAL UP'+(baud ? ' · '+baud : '')) : 'SERIAL DOWN');
     setField('Mode', mode==='mock'?COL.amber:COL.green, (mode||'live').toUpperCase());
     const iffU = (get(contact,'iff','')||'').toString().toUpperCase();
     setField('Iff', iffColor(iffU), contact ? (iffU||'UNKNOWN') : '— NO CONTACT');
@@ -770,7 +790,6 @@
     // ambient sweep ONLY when empty & link up
     if(!contact && !down){
       const sweepA = (t*0.0006)%(Math.PI*2);
-      const grad = rctx.createConicGradient ? null : null;
       rctx.save();
       rctx.translate(cx,cy);
       const wedge = 0.42;
@@ -795,9 +814,10 @@
     rctx.fillText('TRIPLE D', cx, cy+18*DPR);
 
     if(!contact || down){
-      rctx.fillStyle = down ? 'rgba(240,80,58,0.7)' : 'rgba(90,107,125,0.85)';
+      const connecting = !everConnected;
+      rctx.fillStyle = (down && !connecting) ? 'rgba(240,80,58,0.7)' : 'rgba(90,107,125,0.85)';
       rctx.font=(15*DPR)+'px '+css.getPropertyValue('--mono');
-      rctx.fillText(down?'LINK DOWN — STALE':'NO CONTACT', cx, cy+R*0.62);
+      rctx.fillText(connecting ? 'CONNECTING…' : (down?'LINK DOWN — STALE':'NO CONTACT'), cx, cy+R*0.62);
       return;
     }
 
@@ -942,10 +962,11 @@
     sctx.beginPath(); sctx.moveTo(0,H/2); sctx.lineTo(W,H/2); sctx.stroke();
 
     if(!micHealthy || down){
-      sctx.fillStyle = down?'rgba(240,80,58,0.6)':'rgba(90,107,125,0.7)';
+      const connecting = !everConnected;
+      sctx.fillStyle = (down && !connecting)?'rgba(240,80,58,0.6)':'rgba(90,107,125,0.7)';
       sctx.textAlign='center'; sctx.textBaseline='middle';
       sctx.font=(12*DPR)+'px '+css.getPropertyValue('--mono');
-      sctx.fillText(down?'— STALE —':'MIC-01 OFFLINE', W/2, H/2);
+      sctx.fillText(connecting ? '— CONNECTING —' : (down?'— STALE —':'MIC-01 OFFLINE'), W/2, H/2);
       return;
     }
 
