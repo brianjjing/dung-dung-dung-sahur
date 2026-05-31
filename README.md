@@ -32,7 +32,10 @@ triple-d/
     ├── decide.py       # DECIDE  (vision + closing-behavior + fusion)
     ├── iff.py          # IDENTIFY (autonomous friend-or-foe challenge)
     ├── defeat.py       # DEFEAT  (fires effects; DECOY → R4 distract over Wi-Fi)
-    ├── frontend/ui.py  # live operator dashboard (stdlib HTTP + canvas HUD)
+    ├── frontend/       # V11 Converged Console — operator dashboard
+    │   ├── index.html      # single-file dashboard (vanilla Canvas+JS, fully offline)
+    │   ├── ui.py           # production server: index.html + /state.json + /cam.mjpeg
+    │   └── mock_server.py  # offline demo server (scripted FSM + synthetic camera)
     └── models/         # trained detector weights
 ```
 
@@ -70,6 +73,103 @@ python main.py
 DETECT fire, a drone get confirmed, the autonomous IFF challenge resolve to FOE,
 and the DEFEAT commands print. This is your skeleton working end-to-end, with no
 car on Wi-Fi.
+
+## Run the dashboard offline & locally
+
+The operator view is the **V11 Converged Console** — one vanilla `index.html`
+(inline CSS + JS + Canvas, **system monospace only, no webfonts, no CDNs, no
+bundler**). It is **monitoring-only**: it has no buttons or "fire" controls; the
+system is autonomous and the UI only *displays* state. The page is a pure
+function of `GET /state.json` (polled ~15 Hz) plus a camera `<img>` on
+`GET /cam.mjpeg`.
+
+You don't need any hardware — `mock_server.py` (Python **stdlib only**) serves
+the dashboard and a fully scripted data feed:
+
+```bash
+cd triple-d/uno_q/frontend
+python3 mock_server.py            # -> http://127.0.0.1:8077
+```
+
+Open **http://127.0.0.1:8077**. With no flag it loops the whole pipeline:
+`IDLE → DECIDING (vote climbs) → IDENTIFYING → DEFEATING (laser + decoy) →
+COOLDOWN → IDLE`, alternating the IFF branch foe/friend each lap. Force a single
+path with `?scenario=`:
+
+| URL | What it shows |
+|-----|----------------|
+| `http://127.0.0.1:8077/` | full looping scenario (foe ↔ friend) |
+| `…/?scenario=foe` | always resolves FOE → red track, laser-behind-drone, sweep, flashing decoy |
+| `…/?scenario=friend` | always resolves FRIEND → green circle, **never** a laser or active decoy |
+| `…/?scenario=linkdown` | `link.serial = "down"` → dashboard enters **LINK DOWN**, last data marked stale |
+| `…/?scenario=degraded` | `health.camera` / `vision_model` false → **CAM-01 OFFLINE / VISION MODEL NOT LOADED** |
+
+> Verification aid: append `&at=<seconds>` (e.g. `?scenario=foe&at=11.5`) to pin a
+> specific point in the 20-second cycle for a deterministic screenshot.
+
+### Zero external network requests (and how to verify)
+Everything is served from `127.0.0.1` — there are **no** webfonts, analytics,
+CDNs, or third-party calls, so the console works on a fully air-gapped device.
+To confirm: open the browser **DevTools → Network** tab, hard-reload, and check
+that every request's domain is `127.0.0.1:8077` (`index.html`, repeated
+`state.json` polls, and the `cam.mjpeg` stream) — nothing else. You can also run
+the device offline (no Wi-Fi/Ethernet) and the dashboard renders identically.
+
+### How the real device serves the same contract
+In production the mock is replaced by the brain itself — **no UI change**.
+`main.py` builds the exact same state contract from live sensors and hands it to
+`frontend/ui.py`, a tiny stdlib HTTP server (background daemon thread) that
+serves the **identical endpoints**:
+
+```
+GET /            -> the same frontend/index.html (served from disk)
+GET /state.json  -> live contract snapshot (read under a lock, ~poll at 15 Hz)
+GET /cam.mjpeg   -> live camera as multipart/x-mixed-replace JPEG (503 while dark)
+```
+
+So the browser is **display-only** and never touches hardware: the Python brain
+owns every I/O path (USB camera + mic in, Wi-Fi to the UNO R4 car out) and
+actuates the car at the control-loop rate; the dashboard just mirrors the
+published state. Swapping `mock_server.py` for the real device changes nothing
+in `index.html`. The contract:
+
+```jsonc
+{ "ts", "mode": "live|mock", "state": "IDLE|DECIDING|IDENTIFYING|DEFEATING|COOLDOWN",
+  "link": {"serial","baud"}, "health": {"vision_model","acoustic_model","mic","camera"},
+  "sensors": {"mic": {"amplitude","confidence","waveform"}, "camera": {"awake","stream"}, "distance_cm"},
+  "threat": {"score","threshold","closing","components": {"sound","camera","closing"}},
+  "contact": {"iff","grid": {"x","y"},"heading_deg","trail","vote": {"hits","window"}} /* or null */,
+  "defeat": {"active","decoy","laser": {"active","aim","sweep_deg"}}, "log": [] }
+```
+
+`main.py` already starts this server (`UI_ENABLED`/`UI_HOST`/`UI_PORT` in
+`config.py`, default `127.0.0.1:8077`), so `python main.py` brings up the same
+dashboard at the same URL with real telemetry.
+
+## Runs fully offline
+
+The entire system runs with **no internet and no cloud** — detection, decision,
+IFF, and the operator console are all local. Verified across the runtime
+pipeline (`main · comms · detect · decide · iff · defeat · car_client ·
+frontend/ui`): there are **no** HTTP calls, no SDKs that phone home, and no
+weight downloads.
+
+- **On-device inference, local weights.** Vision uses `onnxruntime` on a local
+  `models/drone_detector.onnx` (CPU); acoustic uses a local `torch` `.pth`. The
+  model files ship in the repo — first run fetches nothing.
+- **Dashboard is localhost-only.** `frontend/ui.py` (and `mock_server.py`) bind
+  `127.0.0.1`; `index.html` is one self-contained file — **system monospace
+  only, no webfonts, no CDNs, no bundler** — and makes **zero external requests**
+  (check DevTools → Network: every request is `127.0.0.1:8077`).
+- **The only network is your own LAN.** The single networked link is
+  `car_client.py` → the UNO R4 car over Wi-Fi (`192.168.1.90:5050`) — a private
+  link to your own actuator, not the internet. Run it on an isolated
+  hotspot/router with no WAN and everything still works.
+
+Two setup-time notes (neither needed at demo time): Python dependencies
+(`onnxruntime`, `torch`, `opencv`, `librosa`, `pyserial`, …) must be
+`pip install`ed **once** beforehand; and for a pure-laptop showing with no rig,
+`python3 mock_server.py` renders the identical console with no radios at all.
 
 ## Bring-up plan (flip one thing on at a time)
 1. **Mock pipeline** — as above. Prove the state machine end to end.
