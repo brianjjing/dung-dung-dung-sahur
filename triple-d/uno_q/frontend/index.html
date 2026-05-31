@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>TRIPLE D — V11 Converged Console</title>
+<title>Dashboard - DDD</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNiIgZmlsbD0iIzBCMEYxNCIvPjxnIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMy4yIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik03IDggbDYgOCAtNiA4IiBzdHJva2U9IiMyN0UwQzgiLz48cGF0aCBkPSJNMTQgOCBsNiA4IC02IDgiIHN0cm9rZT0iI0ZGOUUyQyIvPjxwYXRoIGQ9Ik0yMSA4IGw2IDggLTYgOCIgc3Ryb2tlPSIjRjA1MDNBIi8+PC9nPjwvc3ZnPg=="/>
 <!--
   TRIPLE D — V11 Converged Console (operator dashboard)
   ======================================================
@@ -53,36 +54,20 @@
   .footer-banner{border-bottom:none; border-top:1px solid var(--hair);}
   .footer-banner .brand{color:#5f7184;}
 
-  /* ---- header ---------------------------------------------------------- */
+  /* ---- header : just the centered Triple D lockup --------------------- */
   header{
-    flex:0 0 auto; display:flex; align-items:center; gap:22px;
-    padding:14px 18px 13px; background:linear-gradient(180deg,#0d1218,#0a0e13);
+    flex:0 0 auto; display:flex; justify-content:center; align-items:center;
+    padding:15px 20px; background:linear-gradient(180deg,#0d1218,#0a0e13);
   }
-  .logo{display:flex; align-items:center; gap:14px; min-width:230px;}
-  .chev{display:flex; gap:-2px; align-items:center;}
+  .logo{display:flex; flex-direction:column; align-items:center; gap:7px;}
+  .logo-main{display:flex; align-items:center; gap:14px;}
+  .chev{display:flex; align-items:center;}
   .chev svg{display:block;}
-  .wordmark{font-size:21px; font-weight:700; letter-spacing:3px; line-height:1;}
-  .wordmark .w{color:var(--ddd-white);} .wordmark .d{color:var(--ddd-amber); margin-left:5px;}
-  .sub{font-size:9.5px; letter-spacing:2.5px; color:var(--ddd-muted); margin-top:5px;}
-  .state-block{flex:1 1 auto; text-align:center;}
-  .state-title{font-size:30px; font-weight:700; letter-spacing:6px; color:var(--accent);
-    text-shadow:0 0 22px color-mix(in srgb, var(--accent) 45%, transparent); line-height:1;}
-  .state-sub{font-size:11px; letter-spacing:2px; color:#9fb0c0; margin-top:6px;}
-  .badge{
-    display:flex; align-items:center; gap:8px; padding:8px 14px;
-    border:1px solid color-mix(in srgb, var(--ddd-amber) 55%, var(--ddd-line));
-    border-radius:3px; font-size:11px; letter-spacing:2px; color:var(--ddd-amber);
-    background:color-mix(in srgb, var(--ddd-amber) 8%, transparent); white-space:nowrap;
-  }
-  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--ddd-amber);
-    box-shadow:0 0 8px var(--ddd-amber);}
-  .head-right{display:flex; align-items:center; gap:14px; min-width:210px; justify-content:flex-end;}
-  .mock-tag{padding:5px 9px; border:1px solid var(--ddd-line); border-radius:3px;
-    font-size:10px; letter-spacing:2px; color:var(--ddd-muted); white-space:nowrap;}
-  .mock-tag.on{color:var(--ddd-amber); border-color:color-mix(in srgb,var(--ddd-amber) 50%, var(--ddd-line));}
-  .clock-wrap{text-align:right;}
-  .clock{font-size:19px; letter-spacing:2px; color:var(--ddd-white); font-variant-numeric:tabular-nums;}
-  .unit{font-size:9.5px; letter-spacing:2px; color:var(--ddd-muted); margin-top:3px;}
+  .wordmark{font-size:26px; font-weight:700; letter-spacing:4px; line-height:1;}
+  .wordmark .w{color:var(--ddd-white);} .wordmark .d{color:var(--ddd-amber); margin-left:6px;}
+  .sub{font-size:10px; letter-spacing:3px; text-align:center;}
+  .sub .s1{color:var(--ddd-cyan);} .sub .s2{color:var(--ddd-amber);} .sub .s3{color:var(--ddd-red);}
+  .sub .sep{color:var(--ddd-muted); margin:0 5px;}
 
   .accent-rule{flex:0 0 auto; height:3px; background:var(--accent);
     box-shadow:0 0 14px color-mix(in srgb, var(--accent) 70%, transparent);
@@ -91,7 +76,7 @@
   /* ---- main grid ------------------------------------------------------- */
   main{flex:1 1 auto; display:flex; gap:12px; padding:12px; min-height:0;}
   .col{display:flex; flex-direction:column; gap:12px; min-height:0;}
-  .col.left{flex:1.62;} .col.right{flex:1; min-width:340px;}
+  .col.left{flex:1.4;} .col.right{flex:1; min-width:360px;}
 
   .panel{
     position:relative; background:var(--ddd-panel); border:1px solid var(--ddd-line);
@@ -107,26 +92,45 @@
   .ptitle .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 7px var(--accent);}
   .pbody{flex:1 1 auto; min-height:0; position:relative;}
 
-  /* ---- tactical / radar ------------------------------------------------ */
+  /* ---- tactical / radar : fills the whole top-left panel --------------- */
   .tactical{flex:1 1 auto;}
-  .tac-body{display:flex; gap:0; height:100%;}
-  .radar-wrap{flex:1 1 auto; position:relative; min-width:0;}
   #radar{position:absolute; inset:0; width:100%; height:100%;}
-  .tac-side{flex:0 0 200px; display:flex; flex-direction:column; padding:10px 12px; gap:12px;}
+
+  /* ---- system state & threat confidence (top-right, compact) ---------- */
+  .sysfusion{flex:0 0 auto;}
+  .sf-body{display:flex; flex-direction:column; gap:11px; padding:13px 16px 15px;}
+  .sf-state{font-size:15px; font-weight:700; letter-spacing:3px; color:var(--accent); line-height:1;
+    text-shadow:0 0 14px color-mix(in srgb, var(--accent) 40%, transparent);}
+  .sf-bar-row{display:flex; align-items:center; gap:14px;}
+
+  /* ---- camera : the focus of the right column ------------------------- */
+  .campanel{flex:1.7 1 0;}
+  .campanel .pbody{padding:0;}
+  .campanel .pip{position:absolute; inset:0; width:auto; height:auto;
+    aspect-ratio:auto; border:none; border-radius:0;}
+  /* fullscreen toggle (top-right of the camera) + status (top-left) */
+  .cam-fs{display:flex; align-items:center; justify-content:center; width:26px; height:26px; padding:0;
+    border:1px solid var(--ddd-line); border-radius:4px; cursor:pointer; pointer-events:auto;
+    background:rgba(11,15,20,.66); color:#a9bccb; transition:color .15s, border-color .15s, background .15s;}
+  .cam-fs:hover{color:var(--ddd-white); border-color:var(--ddd-muted); background:rgba(11,15,20,.88);}
+  .cam-fs:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+  .cam-fs svg{display:block; width:13px; height:13px;}
+  #pip:fullscreen{width:100vw; height:100vh; background:#05080b;}
+  #pip:fullscreen img{object-fit:contain;}
+  body.cam-expanded .campanel{position:fixed; inset:0; z-index:200; border-radius:0;}
 
   /* camera PiP */
   .pip{position:relative; width:100%; aspect-ratio:16/10; background:#05080b;
     border:1px solid var(--ddd-line); border-radius:3px; overflow:hidden;}
   .pip.live{border-color:var(--accent); box-shadow:0 0 12px color-mix(in srgb,var(--accent) 35%,transparent);}
   .pip-head{position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between;
-    padding:5px 7px; font-size:9px; letter-spacing:1.5px; z-index:3;}
-  .pip-cam{color:var(--ddd-muted);}
-  .rec{display:flex; align-items:center; gap:5px; color:var(--ddd-red);}
-  .rec .dot{width:6px;height:6px;border-radius:50%;background:var(--ddd-red);animation:blink 1s steps(2,start) infinite;}
+    align-items:center; padding:6px 7px; font-size:9px; letter-spacing:1.5px; z-index:3;}
+  .pip-cam{color:#a9bccb; display:flex; align-items:center; gap:6px;}
   .pip img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none;}
   .pip-overlay{position:absolute; inset:0; pointer-events:none; z-index:2;}
   .pip-msg{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
-    justify-content:center; gap:6px; font-size:11px; letter-spacing:2px; color:var(--ddd-muted);}
+    justify-content:center; gap:6px; font-size:11px; letter-spacing:2px; color:var(--ddd-muted);
+    pointer-events:none;}
   .pip-msg small{font-size:8.5px; letter-spacing:1.5px; color:#48586a;}
   .reticle{position:absolute; top:50%; left:50%; width:34px; height:34px; transform:translate(-50%,-50%);
     border:1px solid var(--accent); border-radius:50%; opacity:.85;}
@@ -138,62 +142,32 @@
   .lock-label{position:absolute; top:7px; left:50%; transform:translateX(-50%); font-size:9px;
     letter-spacing:2px; color:var(--ddd-red); z-index:3;}
 
-  /* readouts */
-  .readouts{display:flex; flex-direction:column; gap:9px; font-size:11px;}
-  .ro{display:flex; justify-content:space-between; align-items:baseline;}
-  .ro .k{color:var(--ddd-muted); letter-spacing:1.5px;}
-  .ro .v{color:var(--ddd-white); letter-spacing:1px; font-variant-numeric:tabular-nums;}
-
-  /* ---- mic / oscilloscope --------------------------------------------- */
-  .mic{flex:0 0 132px;}
+  /* ---- acoustic : live waveform + confidence (bottom-left) ------------ */
+  .mic{flex:0 0 138px;}
   .mic-body{display:flex; height:100%;}
-  #scope{flex:1 1 auto; width:100%; height:100%;}
-  .mic-side{flex:0 0 110px; display:flex; flex-direction:column; justify-content:center;
-    padding:0 14px; border-left:1px solid var(--hair); gap:2px;}
+  #scope{flex:1 1 auto; width:100%; height:100%; display:block; min-width:0;}
+  .mic-side{flex:0 0 118px; display:flex; flex-direction:column; justify-content:center;
+    padding:0 16px; border-left:1px solid var(--hair); gap:6px;}
   .mic-k{font-size:9.5px; letter-spacing:2px; color:var(--ddd-muted);}
-  .mic-amp{font-size:24px; font-weight:700; color:var(--accent); line-height:1; font-variant-numeric:tabular-nums;}
-  .mic-conf{font-size:10.5px; color:#9fb0c0; letter-spacing:1px;}
-  .scope-foot{position:absolute; bottom:6px; left:12px; font-size:9px; letter-spacing:1.5px; color:#465667;}
+  .mic-conf{font-size:26px; font-weight:700; color:var(--accent); line-height:1; font-variant-numeric:tabular-nums;}
 
-  /* ---- threat fusion --------------------------------------------------- */
-  .fusion{flex:0 0 auto;}
-  .fz-top{display:flex; align-items:flex-end; gap:14px; padding:14px 16px 8px;}
-  .score{font-size:54px; font-weight:700; line-height:.85; color:var(--threat,var(--ddd-green));
-    text-shadow:0 0 24px color-mix(in srgb, var(--threat,var(--ddd-green)) 40%, transparent);
-    font-variant-numeric:tabular-nums;}
-  .thr{font-size:15px; color:var(--ddd-muted); letter-spacing:1px;}
-  .thr small{display:block; font-size:9px; letter-spacing:2px; margin-top:4px;}
-  .fz-bar-wrap{padding:0 16px;}
-  .fz-bar{position:relative; height:16px; background:var(--panel-2); border:1px solid var(--ddd-line); border-radius:2px; overflow:hidden;}
+  /* ---- threat confidence bar (lives in the system-state panel) -------- */
+  .fz-bar{position:relative; flex:1 1 auto; height:18px; background:var(--panel-2);
+    border:1px solid var(--ddd-line); border-radius:3px; overflow:hidden;}
   .fz-fill{position:absolute; top:0; left:0; bottom:0; background:var(--threat,var(--ddd-green));
-    box-shadow:0 0 10px color-mix(in srgb,var(--threat,var(--ddd-green)) 60%, transparent); transition:width .12s linear;}
-  .fz-mark{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--ddd-white); z-index:2;}
-  .fz-grid{display:flex; gap:0; padding:12px 16px 14px;}
-  .fz-comps{flex:1 1 auto; display:flex; flex-direction:column; gap:7px; padding-right:16px;}
-  .comp{display:flex; align-items:center; gap:9px; font-size:10px; letter-spacing:1.5px;}
-  .comp .cl{color:var(--ddd-muted); width:62px;}
-  .comp .ct{flex:1 1 auto; height:7px; background:var(--panel-2); border:1px solid var(--ddd-line); border-radius:2px; overflow:hidden;}
-  .comp .cf{height:100%; background:var(--threat,var(--ddd-green)); transition:width .12s linear;}
-  .fz-vote{flex:0 0 96px; border-left:1px solid var(--hair); padding-left:14px; display:flex; flex-direction:column; gap:9px;}
-  .vote-k{font-size:9px; letter-spacing:2px; color:var(--ddd-muted);}
-  .vote-v{font-size:16px; color:var(--ddd-white); font-variant-numeric:tabular-nums;}
+    box-shadow:0 0 14px color-mix(in srgb,var(--threat,var(--ddd-green)) 60%, transparent); transition:width .12s linear;}
+  .fz-mark{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--ddd-white); z-index:2;
+    box-shadow:0 0 6px rgba(232,237,242,.6);}
+  .fz-read{flex:0 0 auto; display:flex; align-items:baseline; gap:5px;
+    font-variant-numeric:tabular-nums; letter-spacing:1px;}
+  .fz-score{font-size:22px; font-weight:700; color:var(--threat,var(--ddd-green)); line-height:1;
+    text-shadow:0 0 14px color-mix(in srgb,var(--threat,var(--ddd-green)) 40%, transparent);}
+  .fz-thr{font-size:13px; color:var(--ddd-muted);}
 
-  /* ---- engagement policy ---------------------------------------------- */
-  .policy{flex:0 0 auto;}
-  .pol-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px 18px; padding:13px 16px 6px;}
-  .pol-item{display:flex; gap:9px; align-items:flex-start;}
-  .pol-item .chk{flex:0 0 auto; width:9px; height:9px; border-radius:2px; margin-top:3px;
-    background:var(--ddd-green); box-shadow:0 0 7px color-mix(in srgb,var(--ddd-green) 60%,transparent);}
-  .pol-item.off .chk{background:var(--ddd-muted); box-shadow:none;}
-  .pol-t{font-size:11px; letter-spacing:1.2px; color:var(--ddd-white);}
-  .pol-s{font-size:9.5px; letter-spacing:.5px; color:var(--ddd-muted); margin-top:2px;}
-  .ethic{padding:10px 16px 14px; font-size:11px; font-style:italic; color:var(--ddd-amber);
-    letter-spacing:.3px; opacity:.92;}
-
-  /* ---- decision log ---------------------------------------------------- */
-  .log{flex:1 1 auto;}
-  .log-body{display:flex; flex-direction:column; height:100%;}
-  .log-scroll{flex:1 1 auto; overflow-y:auto; padding:9px 14px; min-height:0;
+  /* ---- decision log : present, but the camera stays the focus --------- */
+  .log{flex:1 1 0;}
+  .log .pbody{display:flex; flex-direction:column;}
+  .log-scroll{flex:1 1 auto; overflow-y:auto; padding:9px 14px 11px; min-height:0;
     display:flex; flex-direction:column; justify-content:flex-end;}
   .log-line{display:flex; gap:12px; font-size:11px; line-height:1.7; white-space:nowrap;}
   .log-line .lt{color:#566879; flex:0 0 auto; font-variant-numeric:tabular-nums;}
@@ -203,30 +177,6 @@
   .log-line.cyan .lm{color:var(--ddd-cyan);}
   .log-line.foe  .lm{color:var(--ddd-red);}
   .log-line.ok   .lm{color:var(--ddd-green);}
-  .chips{flex:0 0 auto; display:flex; gap:8px; padding:10px 14px; border-top:1px solid var(--hair); flex-wrap:wrap;}
-  .chip{display:flex; align-items:center; gap:6px; padding:5px 10px; border:1px solid var(--ddd-line);
-    border-radius:3px; font-size:9.5px; letter-spacing:1.5px; color:var(--ddd-muted);}
-  .chip .cd{width:6px;height:6px;border-radius:50%;background:var(--ddd-muted);}
-  .chip.distract.on{color:var(--ddd-amber); border-color:color-mix(in srgb,var(--ddd-amber) 55%,var(--ddd-line));}
-  .chip.distract.on .cd{background:var(--ddd-amber); box-shadow:0 0 7px var(--ddd-amber);}
-  .chip.disable.on{color:var(--ddd-red); border-color:color-mix(in srgb,var(--ddd-red) 55%,var(--ddd-line));}
-  .chip.disable.on .cd{background:var(--ddd-red); box-shadow:0 0 7px var(--ddd-red);}
-  .chip.defend.on{color:var(--ddd-cyan); border-color:color-mix(in srgb,var(--ddd-cyan) 55%,var(--ddd-line));}
-  .chip.defend.on .cd{background:var(--ddd-cyan); box-shadow:0 0 7px var(--ddd-cyan);}
-  .chip.auth{margin-left:auto; color:var(--ddd-red); border-color:color-mix(in srgb,var(--ddd-red) 60%,var(--ddd-line));
-    background:color-mix(in srgb,var(--ddd-red) 8%, transparent);}
-  .chip.auth .cd{background:var(--ddd-red); box-shadow:0 0 7px var(--ddd-red);}
-  .chip.hidden{display:none;}
-
-  /* ---- status bar ------------------------------------------------------ */
-  .statusbar{flex:0 0 auto; display:flex; gap:0; padding:11px 18px; background:#0a0e13;
-    border-top:1px solid var(--hair);}
-  .sfield{flex:1 1 0; display:flex; align-items:center; gap:9px; min-width:0;}
-  .sfield .sd{width:8px;height:8px;border-radius:50%;background:var(--ddd-muted); flex:0 0 auto;}
-  .sfield .sk{font-size:9px; letter-spacing:2px; color:var(--ddd-muted);}
-  .sfield .sv{font-size:12px; letter-spacing:1.5px; color:var(--ddd-white); white-space:nowrap;
-    overflow:hidden; text-overflow:ellipsis;}
-  .sfield .stxt{display:flex; flex-direction:column; min-width:0;}
 
   /* ---- link-down overlay ---------------------------------------------- */
   .stale{position:fixed; inset:0; pointer-events:none; z-index:50;
@@ -240,7 +190,7 @@
   /* pre-connect: muted, not alarm-red — this is not a link failure yet */
   .stale.connecting{box-shadow:inset 0 0 0 3px var(--ddd-muted);}
   .stale-tag.connecting{border-color:var(--ddd-muted); color:var(--ddd-muted);}
-  body.linkdown .clock,body.linkdown .score,body.linkdown .mic-amp{opacity:.4;}
+  body.linkdown .fz-score,body.linkdown .mic-conf{opacity:.4;}
 
   @keyframes blink{50%{opacity:0;}}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
@@ -250,7 +200,6 @@
      lock/stale pulse). State-bearing canvas motion (laser, sweep, track
      trail) is unaffected — it encodes live pipeline state, not decoration. */
   @media (prefers-reduced-motion: reduce){
-    .rec .dot{animation:none;}
     .lockbox{animation:none;}
     .stale.on{animation:none;}
   }
@@ -258,39 +207,20 @@
 </head>
 <body>
 <div id="app">
-  <!-- top classification banner -->
-  <div class="class-banner">
-    <span>UNCLASSIFIED</span>
-    <span class="mid">UNCLASSIFIED // FOR DEMONSTRATION — NOT FOR OPERATIONAL USE</span>
-    <span>UNCLASSIFIED</span>
-  </div>
-
-  <!-- header -->
+  <!-- header : centered Triple D lockup -->
   <header>
     <div class="logo">
-      <div class="chev" aria-label="Triple D">
-        <svg width="58" height="26" viewBox="0 0 58 26" fill="none">
-          <path d="M2 2 L13 13 L2 24" stroke="#27E0C8" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M16 2 L27 13 L16 24" stroke="#FF9E2C" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M30 2 L41 13 L30 24" stroke="#F0503A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div>
+      <div class="logo-main">
         <div class="wordmark"><span class="w">TRIPLE</span><span class="d">D</span></div>
-        <div class="sub">COUNTER-UAS · NON-KINETIC</div>
+        <div class="chev" aria-label="Triple D">
+          <svg width="62" height="28" viewBox="0 0 58 26" fill="none">
+            <path d="M2 2 L13 13 L2 24" stroke="#27E0C8" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M16 2 L27 13 L16 24" stroke="#FF9E2C" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M30 2 L41 13 L30 24" stroke="#F0503A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
       </div>
-    </div>
-    <div class="state-block">
-      <div class="state-title" id="stateTitle">IDLE</div>
-      <div class="state-sub" id="stateSub">LISTENING — no contact</div>
-    </div>
-    <div class="badge"><span class="dot"></span>HUMAN-ON-THE-LOOP</div>
-    <div class="head-right">
-      <div class="mock-tag" id="mockTag">LIVE</div>
-      <div class="clock-wrap">
-        <div class="clock" id="clock">--:--:--</div>
-        <div class="unit">UNIT-07 · BLD 0.9</div>
-      </div>
+      <div class="sub"><span class="s1">DETECT</span><span class="sep">›</span><span class="s2">DECIDE</span><span class="sep">›</span><span class="s3">DEFEND</span></div>
     </div>
   </header>
 
@@ -298,126 +228,70 @@
 
   <!-- main -->
   <main>
-    <!-- LEFT column -->
+    <!-- LEFT column : radar fills the top, acoustic waveform beneath -->
     <div class="col left">
       <section class="panel tactical">
-        <div class="ptitle"><span class="dot"></span>TACTICAL · GYRO-COMPASS PPI</div>
-        <div class="pbody">
-          <div class="tac-body">
-            <div class="radar-wrap"><canvas id="radar"></canvas></div>
-            <div class="tac-side">
-              <div class="pip" id="pip">
-                <div class="pip-head">
-                  <span class="rec" id="pipRec" style="visibility:hidden"><span class="dot"></span>REC</span>
-                  <span class="pip-cam" id="pipCam">CAM-01 · STBY</span>
-                </div>
-                <span class="lock-label" id="lockLabel" style="display:none">LOCK</span>
-                <img id="cam" alt=""/>
-                <div class="pip-overlay" id="pipOverlay">
-                  <div class="reticle" id="reticle" style="display:none"></div>
-                  <div class="lockbox" id="lockbox" style="display:none"></div>
-                </div>
-                <div class="pip-msg" id="pipMsg">ASLEEP<small>WAKES ON ACOUSTIC CONTACT</small></div>
-              </div>
-              <div class="readouts">
-                <div class="ro"><span class="k">BRG</span><span class="v" id="roBrg">---</span></div>
-                <div class="ro"><span class="k">RNG</span><span class="v" id="roRng">--</span></div>
-                <div class="ro"><span class="k">CLOSING</span><span class="v" id="roClosing">--</span></div>
-                <div class="ro"><span class="k">IFF</span><span class="v" id="roIff">--</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div class="pbody"><canvas id="radar"></canvas></div>
       </section>
 
       <section class="panel mic">
-        <div class="ptitle"><span class="dot"></span>MIC-01 · ACOUSTIC</div>
+        <div class="ptitle"><span class="dot"></span>ACOUSTIC</div>
         <div class="pbody">
           <div class="mic-body">
             <canvas id="scope"></canvas>
             <div class="mic-side">
-              <div class="mic-k">AMP</div>
-              <div class="mic-amp" id="micAmp">0.00</div>
-              <div class="mic-conf" id="micConf">CONF 0.00</div>
+              <div class="mic-k">CONF</div>
+              <div class="mic-conf" id="micConf">0.00</div>
             </div>
           </div>
-          <div class="scope-foot" id="scopeFoot">WAVEFORM · LIVE @ IDLE</div>
         </div>
       </section>
     </div>
 
-    <!-- RIGHT column -->
+    <!-- RIGHT column : system state + threat (top) + camera (focus) + log -->
     <div class="col right">
-      <section class="panel fusion">
-        <div class="ptitle"><span class="dot"></span>THREAT FUSION · EXPLAINABLE</div>
-        <div class="pbody">
-          <div class="fz-top">
-            <div class="score" id="score">0.00</div>
-            <div class="thr">/ <span id="thrVal">0.60</span><small>THRESHOLD</small></div>
-          </div>
-          <div class="fz-bar-wrap">
+      <section class="panel sysfusion">
+        <div class="ptitle"><span class="dot"></span>SYSTEM STATE &amp; THREAT CONFIDENCE</div>
+        <div class="pbody sf-body">
+          <div class="sf-state" id="stateTitle">IDLE</div>
+          <div class="sf-bar-row">
             <div class="fz-bar"><div class="fz-fill" id="fzFill"></div><div class="fz-mark" id="fzMark"></div></div>
-          </div>
-          <div class="fz-grid">
-            <div class="fz-comps">
-              <div class="comp"><span class="cl">SOUND</span><span class="ct"><span class="cf" id="cSound"></span></span></div>
-              <div class="comp"><span class="cl">CAMERA</span><span class="ct"><span class="cf" id="cCam"></span></span></div>
-              <div class="comp"><span class="cl">CLOSING</span><span class="ct"><span class="cf" id="cClose"></span></span></div>
-            </div>
-            <div class="fz-vote">
-              <div><div class="vote-k">VOTE</div><div class="vote-v" id="voteV">0/6</div></div>
-              <div><div class="vote-k">CLOSING</div><div class="vote-v" id="closeV">FALSE</div></div>
-            </div>
+            <div class="fz-read"><span class="fz-score" id="fzScore">0.00</span><span class="fz-thr">/ <span id="thrVal">0.60</span></span></div>
           </div>
         </div>
       </section>
 
-      <section class="panel policy">
-        <div class="ptitle"><span class="dot"></span>ENGAGEMENT POLICY · ASSURANCE</div>
+      <section class="panel campanel">
+        <div class="ptitle"><span class="dot"></span>CAMERA</div>
         <div class="pbody">
-          <div class="pol-grid">
-            <div class="pol-item"><span class="chk"></span><div><div class="pol-t">HUMAN-ON-THE-LOOP</div><div class="pol-s">Defeat needs human authorization</div></div></div>
-            <div class="pol-item"><span class="chk"></span><div><div class="pol-t">NON-KINETIC ONLY</div><div class="pol-s">Distract · Disable · Defend</div></div></div>
-            <div class="pol-item"><span class="chk"></span><div><div class="pol-t">FULLY OFFLINE</div><div class="pol-s">Zero external network calls</div></div></div>
-            <div class="pol-item"><span class="chk"></span><div><div class="pol-t">AUDIT-LOGGED</div><div class="pol-s">Timestamped · replayable</div></div></div>
+          <div class="pip" id="pip">
+            <div class="pip-head">
+              <span class="pip-cam" id="pipCam">CAM-01 · STBY</span>
+              <button class="cam-fs" id="camFs" type="button" aria-label="Toggle camera fullscreen" title="Fullscreen"></button>
+            </div>
+            <span class="lock-label" id="lockLabel" style="display:none">LOCK</span>
+            <img id="cam" alt=""/>
+            <div class="pip-overlay" id="pipOverlay">
+              <div class="reticle" id="reticle" style="display:none"></div>
+              <div class="lockbox" id="lockbox" style="display:none"></div>
+            </div>
+            <div class="pip-msg" id="pipMsg">ASLEEP<small>WAKES ON ACOUSTIC CONTACT</small></div>
           </div>
-          <div class="ethic">"The safe action automates — the harmful one always asks a human."</div>
         </div>
       </section>
 
       <section class="panel log">
         <div class="ptitle"><span class="dot"></span>DECISION LOG · AUDIT TRAIL</div>
         <div class="pbody">
-          <div class="log-body">
-            <div class="log-scroll" id="logScroll"></div>
-            <div class="chips">
-              <div class="chip distract" id="chipDistract"><span class="cd"></span>DISTRACT</div>
-              <div class="chip disable" id="chipDisable"><span class="cd"></span>DISABLE</div>
-              <div class="chip defend" id="chipDefend"><span class="cd"></span>DEFEND</div>
-              <div class="chip auth hidden" id="chipAuth"><span class="cd"></span>AUTHORIZED · OP-7</div>
-            </div>
-          </div>
+          <div class="log-scroll" id="logScroll"></div>
         </div>
       </section>
     </div>
   </main>
 
-  <!-- status bar -->
-  <div class="statusbar">
-    <div class="sfield"><span class="sd" id="sdLink"></span><span class="stxt"><span class="sk">LINK</span><span class="sv" id="svLink">—</span></span></div>
-    <div class="sfield"><span class="sd" id="sdMode"></span><span class="stxt"><span class="sk">MODE</span><span class="sv" id="svMode">—</span></span></div>
-    <div class="sfield"><span class="sd" id="sdIff"></span><span class="stxt"><span class="sk">IFF</span><span class="sv" id="svIff">—</span></span></div>
-    <div class="sfield"><span class="sd" id="sdCam"></span><span class="stxt"><span class="sk">CAM</span><span class="sv" id="svCam">—</span></span></div>
-    <div class="sfield"><span class="sd" id="sdPolicy"></span><span class="stxt"><span class="sk">POLICY</span><span class="sv" id="svPolicy">HUMAN-ON-LOOP</span></span></div>
-    <div class="sfield"><span class="sd" id="sdFsm"></span><span class="stxt"><span class="sk">FSM</span><span class="sv" id="svFsm">—</span></span></div>
-  </div>
-
   <!-- footer -->
-  <div class="class-banner footer-banner">
-    <span class="brand">TRIPLE D · DETECT-DECIDE-DEFEAT</span>
-    <span class="mid">UNCLASSIFIED // FOR DEMONSTRATION — NOT FOR OPERATIONAL USE</span>
-    <span class="brand">CONVERGED BUILD · v11</span>
-  </div>
+  <!-- footer bar kept as spacing only, intentionally empty -->
+  <div class="class-banner footer-banner">&nbsp;</div>
 </div>
 
 <div class="stale" id="staleFrame"></div>
@@ -479,8 +353,8 @@
     IDLE:'LISTENING — no contact',
     DECIDING:'DECIDING — weighing contact',
     IDENTIFYING:'IFF CHALLENGE — confirming contact',
-    AUTHORIZING:'AUTHORIZING — awaiting human gate',
-    DEFEATING:'THREAT — neutralizing (human-authorized)',
+    AUTHORIZING:'AUTHORIZING — clearing to engage',
+    DEFEATING:'THREAT — neutralizing contact',
     COOLDOWN:'COOLDOWN — standing down',
   };
 
@@ -536,13 +410,6 @@
   // =======================================================================
   // DOM RENDER (text panels, header, status bar) — driven by DATA
   // =======================================================================
-  function fmtClock(ts){
-    if(!ts) return '--:--:--';
-    const d = new Date(ts*1000);
-    const p = n=>String(n).padStart(2,'0');
-    return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
-  }
-
   let lastLogLen = -1, lastLogSig = '';
   function renderDOM(){
     const down = isLinkDown();
@@ -563,88 +430,43 @@
     const accent = accentFor(state);
     document.documentElement.style.setProperty('--accent', accent);
 
-    // header
+    // system state label (small, above the threat bar)
     $('stateTitle').textContent = state;
-    $('stateSub').textContent = STATE_SUB[state] || '—';
-    const mode = get(DATA,'mode','');
-    const mt = $('mockTag');
-    if(mode === 'mock'){ mt.textContent='MOCK'; mt.classList.add('on'); }
-    else { mt.textContent = (mode||'LIVE').toUpperCase(); mt.classList.remove('on'); }
-    $('clock').textContent = fmtClock(get(DATA,'ts',0));
 
-    // ---- threat fusion ----
+    // ---- threat confidence (single bar: live score over fixed threshold) ----
     const score = num(get(DATA,'threat.score',0), 0);
     const thr   = num(get(DATA,'threat.threshold',0.6), 0.6);
     const tcol  = threatColor(score, thr, state);
     document.documentElement.style.setProperty('--threat', tcol);
-    $('score').textContent = score.toFixed(2);
+    $('fzScore').textContent = score.toFixed(2);
     $('thrVal').textContent = thr.toFixed(2);
-    const scale = 1.0;
-    $('fzFill').style.width = (clamp(score/scale,0,1)*100).toFixed(1)+'%';
-    $('fzMark').style.left  = (clamp(thr/scale,0,1)*100).toFixed(1)+'%';
-    $('cSound').style.width = (clamp(num(get(DATA,'threat.components.sound',0),0),0,1)*100)+'%';
-    $('cCam').style.width   = (clamp(num(get(DATA,'threat.components.camera',0),0),0,1)*100)+'%';
-    $('cClose').style.width = (clamp(num(get(DATA,'threat.components.closing',0),0),0,1)*100)+'%';
-    const vote = get(DATA,'contact.vote',null);
-    $('voteV').textContent = vote ? (num(vote.hits,0)+'/'+num(vote.window,6)) : '0/6';
-    const closing = get(DATA,'threat.closing',null);
+    $('fzFill').style.width = (clamp(score,0,1)*100).toFixed(1)+'%';
+    $('fzMark').style.left  = (clamp(thr,0,1)*100).toFixed(1)+'%';
     const contact = get(DATA,'contact',null);
-    $('closeV').textContent = closing===true ? 'TRUE' : (contact ? 'TRACK' : 'FALSE');
 
-    // ---- readouts ----
-    if(contact){
-      const gx = num(get(contact,'grid.x',0),0), gy = num(get(contact,'grid.y',0),0);
-      let brg = Math.atan2(gx, -gy) * 180/Math.PI; if(brg<0) brg+=360;
-      $('roBrg').textContent = Math.round(brg).toString().padStart(3,'0')+'°';
-      const dcm = get(DATA,'sensors.distance_cm',null);
-      const rng = (dcm!=null) ? (dcm/100) : (Math.hypot(gx,gy)*50);
-      $('roRng').textContent = rng.toFixed(1)+' m';
-      $('roClosing').textContent = closing===true ? 'YES' : 'TRACK';
-      const iff = (get(contact,'iff','')||'').toString().toUpperCase();
-      $('roIff').textContent = iff || 'UNKNOWN';
-      $('roIff').style.color = iffColor(iff);
-    }else{
-      $('roBrg').textContent='---'; $('roRng').textContent='--';
-      $('roClosing').textContent='--'; $('roIff').textContent='--';
-      $('roIff').style.color = COL.white;
-    }
-
-    // ---- mic ----
-    const amp = num(get(DATA,'sensors.mic.amplitude',0),0);
-    const conf= num(get(DATA,'sensors.mic.confidence',0),0);
+    // ---- acoustic confidence (paired with the waveform) ----
     const micHealthy = get(DATA,'health.mic',true) !== false;
-    if(micHealthy){
-      $('micAmp').textContent = amp.toFixed(2);
-      $('micConf').textContent = 'CONF '+conf.toFixed(2);
-      $('scopeFoot').textContent = 'WAVEFORM · 128 SAMPLES · LIVE @ '+state;
-      $('micAmp').classList.remove('stale-badge');
-    }else{
-      $('micAmp').textContent = 'OFF';
-      $('micConf').textContent = 'MIC OFFLINE';
-      $('scopeFoot').textContent = 'MIC-01 OFFLINE — NO ACOUSTIC';
-      $('micAmp').classList.add('stale-badge');
-    }
+    $('micConf').textContent = micHealthy ? num(get(DATA,'sensors.mic.confidence',0),0).toFixed(2) : 'OFF';
 
     // ---- camera PiP chrome ----
     const camHealthy = get(DATA,'health.camera',true) !== false;
     const awake = get(DATA,'sensors.camera.awake',false) === true;
     const visHealthy = get(DATA,'health.vision_model',true) !== false;
     manageCam(awake, camHealthy);
-    const pip=$('pip'), pipMsg=$('pipMsg'), pipRec=$('pipRec'), pipCam=$('pipCam');
+    const pip=$('pip'), pipMsg=$('pipMsg'), pipCam=$('pipCam');
     const reticle=$('reticle'), lockbox=$('lockbox'), lockLabel=$('lockLabel');
     const iffNow = (get(contact,'iff','')||'').toString().toLowerCase();
     const isFoe = iffNow === 'foe';
     if(!camHealthy){
       pip.classList.remove('live'); pipMsg.style.display='flex';
       pipMsg.innerHTML = 'CAM-01 OFFLINE<small>CAMERA HEALTH FAULT</small>';
-      pipRec.style.visibility='hidden'; pipCam.textContent='CAM-01 · OFFLINE';
+      pipCam.textContent='CAM-01 · OFFLINE';
       reticle.style.display='none'; lockbox.style.display='none'; lockLabel.style.display='none';
-      document.documentElement.style.setProperty('--reticle-shown','0');
     }else if(awake && !down){
       pip.classList.add('live');
       pipMsg.style.display = (camErr || !camWanted) ? 'flex' : 'none';
       if(camErr) pipMsg.innerHTML = 'NO FEED<small>STREAM UNAVAILABLE</small>';
-      pipRec.style.visibility='visible'; pipCam.textContent='CAM-01 · OPTICAL';
+      pipCam.textContent='CAM-01 · OPTICAL';
       reticle.style.display = isFoe ? 'none' : 'block';
       lockbox.style.display = isFoe ? 'block' : 'none';
       lockLabel.style.display = isFoe ? 'block' : 'none';
@@ -652,7 +474,7 @@
     }else{
       pip.classList.remove('live'); pipMsg.style.display='flex';
       pipMsg.innerHTML = 'ASLEEP<small>WAKES ON ACOUSTIC CONTACT</small>';
-      pipRec.style.visibility='hidden'; pipCam.textContent='CAM-01 · STBY';
+      pipCam.textContent='CAM-01 · STBY';
       reticle.style.display='none'; lockbox.style.display='none'; lockLabel.style.display='none';
     }
     if(!visHealthy && camHealthy && awake){
@@ -660,10 +482,6 @@
       pipMsg.innerHTML='VISION MODEL NOT LOADED<small>DETECTION UNAVAILABLE</small>';
       reticle.style.display='none'; lockbox.style.display='none';
     }
-
-    // ---- engagement policy ----
-    // All four assurances hold by construction (offline, non-kinetic, human-on-
-    // the-loop, audit-logged), so the policy panel is static — nothing to toggle.
 
     // ---- decision log (newest at bottom) ----
     const log = get(DATA,'log',[]) || [];
@@ -682,45 +500,6 @@
       }
       sc.scrollTop = sc.scrollHeight;
     }
-
-    // ---- response chips ----
-    const defeat = get(DATA,'defeat',null);
-    const dActive = get(defeat,'active',false)===true && isFoe;
-    const decoy = get(defeat,'decoy',false);
-    const laserA = get(defeat,'laser.active',false)===true;
-    toggleChip('chipDistract', dActive && !!decoy);
-    toggleChip('chipDisable',  dActive && laserA);
-    toggleChip('chipDefend',   false);   // DEFEND = gated tracking-only head; never auto-engaged
-    $('chipAuth').classList.toggle('hidden', !dActive);
-
-    // ---- status bar ----
-    const serialUp = get(DATA,'link.serial','') !== 'down' && !down;
-    const baud = get(DATA,'link.baud',null);
-    setField('Link', serialUp ? COL.green : COL.red,
-             serialUp ? ('SERIAL UP'+(baud ? ' · '+baud : '')) : 'SERIAL DOWN');
-    setField('Mode', mode==='mock'?COL.amber:COL.green, (mode||'live').toUpperCase());
-    const iffU = (get(contact,'iff','')||'').toString().toUpperCase();
-    setField('Iff', iffColor(iffU), contact ? (iffU||'UNKNOWN') : '— NO CONTACT');
-    const camCol = !camHealthy?COL.red:(down?COL.muted:(awake?COL.green:COL.muted));
-    const camTxt = !camHealthy?'OFFLINE':(down?'STALE':(awake?'ONLINE':'STANDBY'));
-    setField('Cam', camCol, camTxt);
-    setField('Policy', COL.amber, 'HUMAN-ON-LOOP');
-    setField('Fsm', accent, down ? 'LINK DOWN' : state);
-  }
-
-  function iffColor(iff){
-    iff = (iff||'').toString().toLowerCase();
-    if(iff==='foe') return COL.red;
-    if(iff==='friend'||iff==='friendly') return COL.green;
-    if(iff==='unknown') return COL.amber;
-    return COL.muted;
-  }
-  function toggleChip(id, on){ $(id).classList.toggle('on', !!on); }
-  function setField(name, color, text){
-    $('sd'+name).style.background = color;
-    $('sd'+name).style.boxShadow = '0 0 7px '+color;
-    $('sv'+name).textContent = text;
-    $('sv'+name).style.color = (name==='Fsm'||name==='Iff') ? color : COL.white;
   }
 
   // =======================================================================
@@ -948,8 +727,8 @@
     const n=parseInt(h,16); return ((n>>16)&255)+','+((n>>8)&255)+','+(n&255);
   }
 
-  // oscilloscope — driven by sensors.mic.waveform; animates even at IDLE
-  let scopeFallback = [];
+  // oscilloscope — driven by sensors.mic.waveform; animates even at IDLE so
+  // the trace always reflects live acoustic energy (synthesised when quiet).
   function drawScope(t){
     const W=scope.width, H=scope.height;
     sctx.clearRect(0,0,W,H);
@@ -1009,6 +788,31 @@
     const ro=new ResizeObserver(()=>sizeAll());
     ro.observe(radar.parentElement); ro.observe(scope.parentElement);
   }
+
+  // =======================================================================
+  // CAMERA FULLSCREEN : toggle the camera tile to/from the browser fullscreen
+  // layer. Falls back to a fixed-overlay class where the API is unavailable.
+  // =======================================================================
+  const pipEl = $('pip'), camFs = $('camFs');
+  const FS_EXPAND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+  const FS_COMPRESS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+  function camIsFs(){ return document.fullscreenElement===pipEl || document.body.classList.contains('cam-expanded'); }
+  function syncFsIcon(){
+    const on = camIsFs();
+    camFs.innerHTML = on ? FS_COMPRESS : FS_EXPAND;
+    camFs.title = on ? 'Exit fullscreen' : 'Fullscreen';
+  }
+  camFs.addEventListener('click', async (e)=>{
+    e.stopPropagation();
+    try{
+      if(document.fullscreenElement){ await document.exitFullscreen(); }
+      else if(pipEl.requestFullscreen){ await pipEl.requestFullscreen(); }
+      else { document.body.classList.toggle('cam-expanded'); }
+    }catch(err){ document.body.classList.toggle('cam-expanded'); }
+    syncFsIcon();
+  });
+  document.addEventListener('fullscreenchange', ()=>{ sizeAll(); syncFsIcon(); });
+  syncFsIcon();
 })();
 </script>
 </body>

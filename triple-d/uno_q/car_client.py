@@ -19,10 +19,14 @@ def send_car(cmd: str):
     D = distract mode
     A = acoustic seek
     M = mic level
+    E = enemy LED red ON
+    C = clear LED OFF
+    G = LED green
+    X = LED blue
     """
     cmd = cmd.strip().upper()
 
-    if cmd not in ["F", "B", "L", "R", "S", "D", "A", "M"]:
+    if cmd not in ["F", "B", "L", "R", "S", "D", "A", "M", "E", "C", "G", "X"]:
         raise ValueError(f"Invalid car command: {cmd}")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -81,6 +85,26 @@ def mic_level():
     Ask the R4 to print/read mic level. Mainly for debugging.
     """
     return send_car("M")
+
+
+def enemy_led_on():
+    """Turn the enemy LED red ON."""
+    send_car("E")
+
+
+def enemy_led_off():
+    """Clear the enemy LED (OFF)."""
+    send_car("C")
+
+
+def enemy_led_green():
+    """Set the enemy LED green."""
+    send_car("G")
+
+
+def enemy_led_blue():
+    """Set the enemy LED blue."""
+    send_car("X")
 
 
 def deploy_decoy():

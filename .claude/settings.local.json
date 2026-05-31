@@ -15,7 +15,25 @@
       "Bash(python3 -m py_compile car_client.py config.py decide.py defeat.py)",
       "Bash(python3 -c \"import config; print\\('CAMERA_SOURCE =', repr\\(config.CAMERA_SOURCE\\)\\); import car_client; print\\('R4_IP =', car_client.R4_IP, 'PORT =', car_client.PORT\\)\")",
       "Bash(.venv/bin/python *)",
-      "Bash(../../.venv/bin/python -c ' *)"
+      "Bash(../../.venv/bin/python -c ' *)",
+      "Bash(node .claude/skills/impeccable/scripts/context.mjs)",
+      "Bash(node .agents/skills/impeccable/scripts/context.mjs)",
+      "Bash(grep -iE '\\\\.\\(html|css|js|jsx|ts|tsx|vue|svelte\\)$')",
+      "Bash(python3 -c \"import sys; print\\(sys.version\\)\")",
+      "Bash(node -e \"try{require.resolve\\('puppeteer'\\);console.log\\('puppeteer yes'\\)}catch\\(e\\){console.log\\('no puppeteer'\\)}\")",
+      "Read(//Applications/Google Chrome.app/**)",
+      "Bash(grep -nE \"drawScope|getElementById\\\\\\('score'\\\\\\)|\\\\\\\\\\\\$\\\\\\('score'\\\\\\)|micAmp|micConf|scopeFoot|cSound|cCam|cClose|voteV|closeV|svPolicy|sdPolicy|'scope'|getContext\\\\\\('2d'\\\\\\)\" index.html)",
+      "Read(//private/tmp/**)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1600,900 --virtual-time-budget=4000 --screenshot=/tmp/ddd_foe.png \"http://127.0.0.1:8077/?scenario=foe&at=12\")",
+      "Bash(echo \"exit $?\")",
+      "Read(//tmp/**)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1600,900 --virtual-time-budget=4000 --screenshot=/tmp/ddd_cool.png \"http://127.0.0.1:8077/?scenario=foe&at=16\")",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1600,900 --virtual-time-budget=3500 --screenshot=/tmp/ddd_idle.png \"http://127.0.0.1:8077/?scenario=foe&at=2\")",
+      "Bash(pkill -f \"mock_server.py --port 8077\")",
+      "Bash(curl -s \"http://127.0.0.1:8078/state.json?scenario=foe&at=12\")",
+      "Bash(pkill -f \"mock_server.py --port 8078\")",
+      "Bash(python3 *)",
+      "Bash(pkill -f \"mock_server.py --port 8090\")"
     ]
   }
 }
