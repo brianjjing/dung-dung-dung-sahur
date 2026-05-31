@@ -17,6 +17,8 @@ Layered, non-kinetic defense against RF-silent (fiber-optic) suicide drones.
 This is one system across two brains — a thin C firmware on the car and a
 Python brain on the Arduino Uno Q. **One repo, two folders.**
 
+> **Authors:** Brian Jing · Mikey Nguyen · Victor Lopez · Kevin Pyo
+
 ```
 triple-d/
 ├── uno_r3/triple_d_car/triple_d_car.ino   # flash once; runs forever
