@@ -1,8 +1,10 @@
-"""comms.py - the one wire between the two brains.
+"""comms.py - the R3 sensor telemetry link.
 
-CarLink wraps the serial port to the UNO R3. It parses telemetry lines into
-a dict and sends one-word ACTION commands back. In MOCK_SERIAL mode it
-synthesizes a scripted threat so the whole pipeline runs with no hardware.
+SensorLink wraps the USB serial port to the UNO R3 sensor board on the car and
+parses its telemetry lines into a dict. It is read-only: actuation (motors +
+effects) goes to the UNO R4 WiFi board over Wi-Fi via car_client.py. In
+MOCK_SERIAL mode it synthesizes a scripted threat so the whole pipeline runs
+with no hardware.
 """
 import time
 import config
@@ -69,7 +71,10 @@ class _MockScenario:
             return {"amp": 30, "pitch": 300, "dist": 200, "line": 0}
 
 
-class CarLink:
+class SensorLink:
+    """Serial telemetry from the R3 sensor board. Read-only: the R3 streams
+    mic + ultrasonic telemetry up and receives no commands (actuation lives on
+    the R4 WiFi board -- see car_client.py)."""
     def __init__(self):
         self.mock = config.MOCK_SERIAL or not _HAVE_SERIAL
         self._last = None
@@ -96,13 +101,6 @@ class CarLink:
         if latest:
             self._last = latest
         return latest
-
-    def send(self, action: str):
-        """Send one ACTION command (e.g. 'DISTRACT_ON')."""
-        if self.mock:
-            print(f"[comms:MOCK] -> CMD,{action}")
-            return
-        self.ser.write(f"CMD,{action}\n".encode())
 
     def close(self):
         if not self.mock:

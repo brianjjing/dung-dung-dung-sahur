@@ -10,21 +10,31 @@ in the loop. Two coordinated effects fire together:
   DECOY        : a predefined decoy is triggered at a separate location to pull
                  any follow-on threat away from the protected asset.
 
-Both effects here are PLACEHOLDERS. The real laser gimbal / decoy drive is part
-of the hardware output defined elsewhere; this module only emits the command and
-records intent so the rest of the pipeline can be exercised end to end.
+The DECOY head is driven on the real car: it triggers the UNO R4 WiFi board's
+DISTRACT routine over Wi-Fi (car_client.deploy_decoy). LASER_CUTOFF stays a
+PLACEHOLDER -- there is no R4 command for the laser gimbal yet, so this module
+only records intent so the rest of the pipeline can be exercised end to end.
 """
+import car_client
+
+
+def _safe(fn, *args):
+    """Run a car_client call; warn (don't crash) if the R4 is unreachable, so
+    the pipeline still runs end to end with no car on the network."""
+    try:
+        fn(*args)
+    except OSError as e:
+        print(f"[defeat] R4 unreachable ({e}); car command dropped")
 
 
 class Responder:
-    def __init__(self, car):
-        self.car = car
+    def __init__(self):
         self.active = set()
 
-    # --- placeholders: real hardware drive is wired elsewhere ----------------
+    # --- effects -------------------------------------------------------------
 
     def laser_cutoff(self, aim, on: bool = True):
-        """PLACEHOLDER: fire/stop the fiber-cut laser at the aim solution."""
+        """PLACEHOLDER: no R4 command for the laser gimbal yet -- record intent."""
         if on:
             if aim is not None and aim.available:
                 print(f"[defeat] LASER_CUTOFF -> cut behind drone at "
@@ -35,20 +45,18 @@ class Responder:
                 note = aim.note if aim is not None else "no aim solution"
                 print(f"[defeat] LASER_CUTOFF -> firing on last-known bearing "
                       f"({note})")
-            self.car.send("LASER_CUTOFF_ON")     # placeholder hardware command
             self.active.add("LASER_CUTOFF")
         else:
-            self.car.send("LASER_CUTOFF_OFF")
             self.active.discard("LASER_CUTOFF")
 
     def decoy(self, on: bool = True):
-        """PLACEHOLDER: trigger/clear the predefined decoy at its own location."""
+        """Trigger/clear the DISTRACT head on the R4 car over Wi-Fi."""
         if on:
-            print("[defeat] DECOY -> triggering predefined decoy (offset location)")
-            self.car.send("DECOY_ON")            # placeholder hardware command
+            print("[defeat] DECOY -> R4 DISTRACT routine (Wi-Fi)")
+            _safe(car_client.deploy_decoy)
             self.active.add("DECOY")
         else:
-            self.car.send("DECOY_OFF")
+            _safe(car_client.stop_car)
             self.active.discard("DECOY")
 
     # --- dispatch ------------------------------------------------------------
@@ -60,7 +68,7 @@ class Responder:
             self.decoy(True)
 
     def all_off(self):
-        self.car.send("ALL_OFF")
+        _safe(car_client.stop_car)
         self.laser_cutoff(None, False)
         self.decoy(False)
         self.active.clear()
