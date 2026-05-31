@@ -1,6 +1,10 @@
 .venv/
+.DS_Store
 
 __pycache__/
+
+# generated pitch-deck artifact — rebuild with `python brand/make_deck.py`
+brand/*.pptx
 
 # model backups kept locally for rollback, not versioned
 *.onnx.bak

@@ -1,0 +1,28 @@
+<svg width="520" height="140" viewBox="0 0 520 140" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Triple D — Detect Decide Defeat">
+  <defs>
+    <linearGradient id="pipeline" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#27E0C8"/>
+      <stop offset="50%" stop-color="#FF9E2C"/>
+      <stop offset="100%" stop-color="#F0503A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- backdrop (transparent for flexible placement) -->
+
+  <!-- triple-chevron mark: Detect > Decide > Defeat, cyan -> amber -> red -->
+  <g stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M22 38 L52 70 L22 102"  stroke="#27E0C8"/>
+    <path d="M58 38 L88 70 L58 102"  stroke="#FF9E2C"/>
+    <path d="M94 38 L124 70 L94 102" stroke="#F0503A"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="156" y="68" font-family="'Rajdhani','Chakra Petch','Space Grotesk',sans-serif"
+        font-size="50" font-weight="700" letter-spacing="2" fill="#E8EDF2">TRIPLE</text>
+  <text x="156" y="68" font-family="'Rajdhani','Chakra Petch','Space Grotesk',sans-serif"
+        font-size="50" font-weight="700" letter-spacing="2" fill="#FF9E2C" dx="186">D</text>
+
+  <!-- pipeline subline -->
+  <text x="158" y="100" font-family="'JetBrains Mono','IBM Plex Mono',monospace"
+        font-size="15" letter-spacing="3" fill="url(#pipeline)" font-weight="600">DETECT &#8250; DECIDE &#8250; DEFEAT</text>
+</svg>

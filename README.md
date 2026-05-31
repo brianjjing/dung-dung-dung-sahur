@@ -1,3 +1,14 @@
+<p align="center">
+  <img src="brand/banner.svg" alt="Triple D — Detect · Decide · Defeat" width="100%">
+</p>
+
+<p align="center">
+  <code>DETECT → DECIDE → DEFEAT</code> &nbsp;·&nbsp; <code>DISTRACT · DISABLE · DEFEND</code><br>
+  <em>The safe action is automatic. The hard one asks you.</em>
+</p>
+
+---
+
 # Triple D
 
 Layered, non-kinetic defense against RF-silent (fiber-optic) suicide drones.

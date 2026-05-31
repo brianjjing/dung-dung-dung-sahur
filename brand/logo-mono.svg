@@ -1,0 +1,12 @@
+<svg width="520" height="140" viewBox="0 0 520 140" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Triple D">
+  <!-- single-color variant for stamps, laser-etch on the enclosure, watermarks -->
+  <g stroke="#E8EDF2" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M22 38 L52 70 L22 102"/>
+    <path d="M58 38 L88 70 L58 102"/>
+    <path d="M94 38 L124 70 L94 102"/>
+  </g>
+  <text x="156" y="68" font-family="'Rajdhani','Chakra Petch',sans-serif"
+        font-size="50" font-weight="700" letter-spacing="2" fill="#E8EDF2">TRIPLE D</text>
+  <text x="158" y="100" font-family="'JetBrains Mono',monospace"
+        font-size="15" letter-spacing="3" fill="#E8EDF2" font-weight="600">DETECT &#8250; DECIDE &#8250; DEFEAT</text>
+</svg>
