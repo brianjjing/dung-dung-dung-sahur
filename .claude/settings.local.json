@@ -10,7 +10,8 @@
       "Bash(sed -i '' 's/CERBERUS - car-side firmware/Triple D - car-side firmware/' triple_d_car.ino triple-d/uno_r3/triple_d_car/triple_d_car.ino)",
       "Bash(sed -i '' 's/CERBERUS - Uno Q \\(Linux\\)/Triple D - Uno Q \\(Linux\\)/' triple-d/uno_q/requirements.txt)",
       "Bash(git checkout *)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(git fetch *)"
     ]
   }
 }
