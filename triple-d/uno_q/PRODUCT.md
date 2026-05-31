@@ -20,7 +20,7 @@ link state) to trust the verdict.
 ## Product Purpose
 
 Triple-D is a layered, non-kinetic defense against RF-silent (fiber-optic)
-suicide drones. The dashboard (`ui.py`) is the single live operator view: a
+suicide drones. The dashboard (`frontend/ui.py`) is the single live operator view: a
 full-screen canvas HUD served from a stdlib HTTP server on the Uno Q, polling
 brain state ~20×/s. It renders one persistent scene — a bird's-eye detection
 grid that is empty until a contact is confirmed, a camera window that wakes on

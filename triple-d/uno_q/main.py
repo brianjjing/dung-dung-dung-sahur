@@ -1,4 +1,4 @@
-"""main.py - Triple D brain (Uno Q).
+"""main.py - Triple D brain (Mac).
 
 State machine:
   IDLE -> (acoustic contact) -> DECIDING -> IDENTIFYING -> DEFEATING
@@ -21,12 +21,12 @@ import enum
 import time
 
 import config
-from comms import CarLink
+from comms import SensorLink
 from detect import AcousticDetector
 import decide
 from iff import IFFChallenger
 from defeat import Responder
-from ui import Dashboard
+from frontend.ui import Dashboard
 
 
 def _make_detector():
@@ -57,13 +57,13 @@ RESPONSE_PLAN = ["LASER_CUTOFF", "DECOY"]
 
 class TripleD:
     def __init__(self):
-        self.car        = CarLink()
+        self.sensors    = SensorLink()
         self.detector   = _make_detector()
         self.closing    = decide.ClosingTracker()
         self.trajectory = decide.TrajectoryTracker()
         self.vision     = decide.VisionClassifier()
         self.iff        = IFFChallenger()
-        self.responder  = Responder(self.car)
+        self.responder  = Responder()
         self.dash       = Dashboard()
         # Let the dashboard serve the live webcam frames for its camera window.
         self.dash.set_frame_provider(self.vision.frame_jpeg)
@@ -86,7 +86,7 @@ class TripleD:
         try:
             while True:
                 t0 = time.time()
-                telem = self.car.read_telemetry()
+                telem = self.sensors.read_telemetry()
                 self.closing.update(telem)
                 contact = self.detector.update(telem)
                 self.step(telem, contact)
@@ -100,7 +100,7 @@ class TripleD:
             if hasattr(self.detector, "close"):
                 self.detector.close()
             self.iff.close()
-            self.car.close()
+            self.sensors.close()
             self.dash.stop()
 
     def step(self, telem, contact):

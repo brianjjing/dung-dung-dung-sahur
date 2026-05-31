@@ -1,4 +1,4 @@
-"""ui.py - live operator dashboard for the Triple D brain.
+"""frontend/ui.py - live operator dashboard for the Triple D brain.
 
 A dependency-free visual front end for the state machine in main.py. A tiny
 stdlib HTTP server runs in a background daemon thread and exposes the brain's
