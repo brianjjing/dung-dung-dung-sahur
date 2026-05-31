@@ -1,0 +1,9 @@
+# FiberTrace dependencies (in addition to Triple D's pyserial).
+#
+# Required to run at all (the synthetic scene is drawn + processed with these):
+opencv-python>=4.8
+numpy>=1.24
+
+# Dashboard (Flask page + MJPEG video + WebSocket bearing fan):
+flask>=3.0
+flask-sock>=0.7        # WebSocket; if absent the browser falls back to polling

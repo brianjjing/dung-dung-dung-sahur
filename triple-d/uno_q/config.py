@@ -85,3 +85,47 @@ JOYSTICK_I2C_BUS = 1           # Linux I2C bus number for the Modulino Joystick
 # ----------------------------------------------------------------------- TIMING
 LOOP_HZ      = 20              # main control-loop rate
 COOLDOWN_S   = 4.0            # after a response, how long before re-arming
+
+# ============================================================ FIBERTRACE ("look down")
+# Separate capability (run `python -m fibertrace.trace_main` from this folder).
+# The RC car sits on the ground; its camera looks at a fiber-optic drone and
+# detects the thin fiber trailing from it, then EXTRAPOLATES that line to
+# guesstimate where the operator is — fully offline. All FiberTrace tunables
+# are FT_-prefixed to avoid clashing with the Triple D names above; it reuses
+# CAMERA_INDEX for the live webcam.
+
+# ---- camera ----
+FT_MOCK_CAMERA = True          # True -> synthetic drone+fiber scene (no webcam)
+FT_FRAME_W     = 640
+FT_FRAME_H     = 480
+FT_TARGET_FPS  = 15            # main-loop rate cap
+FT_CAMERA_HFOV_DEG = 60.0      # assumed horizontal field of view -> bearing math
+
+# ---- vision / fiber detection ----
+FT_ROI_TOP_FRAC    = 0.0       # use full frame (the fiber spans drone -> ground)
+FT_CLAHE_CLIP      = 2.0       # contrast-limited adaptive histogram equalization
+FT_GAUSS_KERNEL    = 5         # blur kernel (odd) to kill speckle before Canny
+FT_CANNY_LO        = 50
+FT_CANNY_HI        = 150
+FT_HOUGH_THRESHOLD = 40        # min votes for a Hough line
+FT_HOUGH_MIN_LINE  = 55        # min line length (px)
+FT_HOUGH_MAX_GAP   = 40        # max gap to bridge collinear segments (px)
+FT_MAX_TILT_DEG    = 55        # keep lines within this many deg of vertical
+FT_MIN_CONFIDENCE  = 0.35      # smoothed confidence below this => "no fiber"
+FT_SMOOTH_WINDOW   = 5         # frames of temporal smoothing
+
+# ---- operator prediction (extrapolate the fiber, fully offline) ----
+FT_PREDICT_MIN_HITS           = 3    # tracked frames before we commit a guess
+FT_OPERATOR_SIDE_DEADBAND_DEG = 4.0  # |bearing| under this reads "ahead"
+
+# ---- dashboard (Flask + WebSocket) ----
+FT_DASH_HOST = "0.0.0.0"       # bind address; 0.0.0.0 = reachable on the LAN
+FT_DASH_PORT = 5050            # open http://localhost:5050 (5000 = macOS AirPlay)
+
+# ---- output ----
+FT_OPERATOR_ESTIMATE_JSON = "operator_estimate.json"  # final guesstimate on exit
+
+# ---- demo ----
+# With FT_MOCK_CAMERA=True, stop after this many seconds so the scripted
+# scenario (track -> brief occlusion -> track) plays once, then summarize.
+FT_MOCK_RUN_SECONDS = 13.0
