@@ -127,7 +127,6 @@ class Dashboard:
         state = contract.get("state")
         contact = contract.get("contact") or {}
         iff = contact.get("iff")
-        defeat = contact and contract.get("defeat") or {}
         engaging = bool((contract.get("defeat") or {}).get("active"))
         awake = bool(((contract.get("sensors") or {}).get("camera") or {}).get("awake"))
 
