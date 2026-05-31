@@ -7,10 +7,15 @@ serial link to the car UNO R3, and IFF transceiver on a second serial port.
 # ----------------------------------------------------------------- SERIAL LINK
 SERIAL_PORT = "/dev/ttyACM0"   # UNO R3 on the car (ttyACM0 or ttyUSB0 on Linux)
 BAUD        = 115200
-MOCK_SERIAL = False
+MOCK_SERIAL = True             # Wi-Fi-only topology: no R3 sensor board over USB
+                               # -> use scripted mock telemetry
 
 # ---------------------------------------------------------------------- CAMERA
-CAMERA_INDEX     = 1           # USB webcam on the Uno Q (via the USB hub)
+CAMERA_INDEX     = 1           # USB webcam fallback (used if CAMERA_SOURCE unset)
+# Elegoo onboard camera MJPEG stream on the car's Wi-Fi AP. When set, this takes
+# precedence over CAMERA_INDEX (see decide.VisionClassifier.activate). Set to ""
+# to fall back to the local USB webcam at CAMERA_INDEX.
+CAMERA_SOURCE    = "http://192.168.4.1:81/stream"
 MOCK_VISION      = False
 MOCK_VISION_LABEL = "drone"    # unused when MOCK_VISION=False
 
@@ -57,8 +62,8 @@ VISION_DECIDE_TIMEOUT_S = 1.5
 # else is treated as a FOE -> autonomous DEFEAT (see iff.py).
 IFF_SHARED_SECRET       = "triple-d-shared-key-2025"  # preloaded on the friendly Uno
 IFF_CHALLENGE_TIMEOUT_S = 1.0     # wait this long for the contact to present the key
-MOCK_IFF          = False
-MOCK_IFF_FRIENDLY = False         # only used when MOCK_IFF=True
+MOCK_IFF          = True          # Wi-Fi-only topology: no friendly-drone Arduino
+MOCK_IFF_FRIENDLY = False         # only used when MOCK_IFF=True; False -> FOE -> engage
 IFF_PORT          = "/dev/ttyACM1"  # serial transceiver to the friendly/foe drone
 IFF_BAUD          = 115200
 

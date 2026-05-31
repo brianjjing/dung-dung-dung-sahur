@@ -11,7 +11,11 @@
       "Bash(sed -i '' 's/CERBERUS - Uno Q \\(Linux\\)/Triple D - Uno Q \\(Linux\\)/' triple-d/uno_q/requirements.txt)",
       "Bash(git checkout *)",
       "Bash(git rm *)",
-      "Bash(git fetch *)"
+      "Bash(git fetch *)",
+      "Bash(python3 -m py_compile car_client.py config.py decide.py defeat.py)",
+      "Bash(python3 -c \"import config; print\\('CAMERA_SOURCE =', repr\\(config.CAMERA_SOURCE\\)\\); import car_client; print\\('R4_IP =', car_client.R4_IP, 'PORT =', car_client.PORT\\)\")",
+      "Bash(.venv/bin/python *)",
+      "Bash(../../.venv/bin/python -c ' *)"
     ]
   }
 }

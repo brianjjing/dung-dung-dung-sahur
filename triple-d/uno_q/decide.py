@@ -186,9 +186,12 @@ class VisionClassifier:
             return True
 
         try:
-            self.cap = cv2.VideoCapture(config.CAMERA_INDEX)
+            # Prefer the Elegoo Wi-Fi camera stream when configured; otherwise
+            # fall back to the local USB webcam index.
+            camera_source = getattr(config, "CAMERA_SOURCE", "") or config.CAMERA_INDEX
+            self.cap = cv2.VideoCapture(camera_source)
             if not self.cap.isOpened():
-                raise RuntimeError(f"camera {config.CAMERA_INDEX} not available")
+                raise RuntimeError(f"camera {camera_source} not available")
             self.session = ort.InferenceSession(
                 self.model_path, providers=["CPUExecutionProvider"]
             )

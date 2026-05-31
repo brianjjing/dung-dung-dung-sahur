@@ -1,8 +1,8 @@
 import socket
 import time
 
-# UNO R4 WiFi IP
-R4_IP = "192.168.1.90"
+# UNO R4 WiFi on the Elegoo camera network (ELEGOO-D4FC19A0ED30)
+R4_IP = "192.168.4.90"
 PORT = 5050
 
 
@@ -17,10 +17,12 @@ def send_car(cmd: str):
     R = right
     S = stop
     D = distract mode
+    A = acoustic seek
+    M = mic level
     """
     cmd = cmd.strip().upper()
 
-    if cmd not in ["F", "B", "L", "R", "S", "D"]:
+    if cmd not in ["F", "B", "L", "R", "S", "D", "A", "M"]:
         raise ValueError(f"Invalid car command: {cmd}")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -65,10 +67,26 @@ def distract():
     send_car("D")
 
 
+def acoustic_seek():
+    """
+    Makes the car scan left/right using the onboard mic
+    and move toward the loudest direction.
+    """
+    print("Running acoustic seek...")
+    send_car("A")
+
+
+def mic_level():
+    """
+    Ask the R4 to print/read mic level. Mainly for debugging.
+    """
+    return send_car("M")
+
+
 def deploy_decoy():
     """
     Main 3Ds DISTRACT action.
-    This is the function the AI pipeline should call.
+    defeat.py already calls this for the DECOY head.
     """
     print("Deploying 3Ds DISTRACT mode...")
 
