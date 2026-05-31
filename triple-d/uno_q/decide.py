@@ -8,6 +8,7 @@ Three signals are fused into one verdict:
 Nothing here fires an effect. It only RECOMMENDS. The human (operator.py)
 authorizes before anything in defeat.py runs.
 """
+import math
 import os
 from collections import deque
 from dataclasses import dataclass, field
@@ -62,6 +63,82 @@ class ClosingTracker:
         return dist_falling and amp_rising
 
 
+@dataclass
+class AimSolution:
+    """Where the laser should cut the trailing fiber-optic tether.
+
+    available  : True once enough track exists to fit a heading
+    target_xy  : last known drone centroid (image px)
+    heading_deg: drone flight direction (atan2 over the recent track)
+    cutoff_xy  : point BEHIND the drone where the tether runs -> aim here
+    sweep_deg  : laser sweep axis, PERPENDICULAR to the flight path
+    """
+    available: bool
+    target_xy: tuple
+    heading_deg: float
+    cutoff_xy: tuple
+    sweep_deg: float
+    note: str = ""
+
+
+class TrajectoryTracker:
+    """Records the drone's image-plane centroid over recent frames and derives a
+    laser aim solution: a cut point BEHIND the drone, swept PERPENDICULAR to its
+    flight path -- where the trailing fiber-optic tether runs.
+
+    Pure geometry on the vision boxes; the actual laser drive is a placeholder in
+    defeat.py (real hardware lives elsewhere)."""
+    def __init__(self):
+        self.pts = deque(maxlen=config.TRAJ_WINDOW)   # (t, cx, cy)
+
+    def update(self, detections):
+        """Feed the current frame's detections; tracks the highest-conf box."""
+        if not detections:
+            return
+        best = max(detections, key=lambda d: d["conf"])
+        x1, y1, x2, y2 = best["box"]
+        self.pts.append((time.time(), (x1 + x2) / 2.0, (y1 + y2) / 2.0))
+
+    def reset(self):
+        self.pts.clear()
+
+    def aim(self) -> AimSolution:
+        """Best laser aim solution from the track so far.
+
+        The drone is assumed to fly roughly straight, so the GENERAL DIRECTION is
+        the principal axis of all the tracked centroids (a least-squares line fit),
+        which averages out per-frame detection jitter far better than a single
+        first-vs-last segment. The axis is then oriented along the net start->end
+        travel so it points the way the drone is actually heading."""
+        if len(self.pts) < 2:
+            return AimSolution(False, (0.0, 0.0), 0.0, (0.0, 0.0), 0.0,
+                               "insufficient track -- placeholder aim")
+        xs = [p[1] for p in self.pts]
+        ys = [p[2] for p in self.pts]
+        x1, y1 = xs[-1], ys[-1]                 # current (latest) position
+        dx_net, dy_net = xs[-1] - xs[0], ys[-1] - ys[0]
+        if math.hypot(dx_net, dy_net) < 1e-6:
+            return AimSolution(False, (x1, y1), 0.0, (x1, y1), 0.0,
+                               "drone effectively stationary -- placeholder aim")
+
+        # Principal axis of the tracked points = general flight direction.
+        n = len(xs)
+        mx, my = sum(xs) / n, sum(ys) / n
+        sxx = sum((x - mx) ** 2 for x in xs)
+        syy = sum((y - my) ** 2 for y in ys)
+        sxy = sum((xs[i] - mx) * (ys[i] - my) for i in range(n))
+        theta = 0.5 * math.atan2(2.0 * sxy, sxx - syy)
+        ux, uy = math.cos(theta), math.sin(theta)
+        if ux * dx_net + uy * dy_net < 0:       # orient along net travel
+            ux, uy = -ux, -uy
+
+        heading = math.degrees(math.atan2(uy, ux))
+        back = config.LASER_CUTOFF_BACK_PX
+        cutoff = (x1 - ux * back, y1 - uy * back)   # point BEHIND the drone
+        sweep = (heading + 90.0) % 180.0            # PERPENDICULAR to flight path
+        return AimSolution(True, (x1, y1), heading, cutoff, sweep, "tracked")
+
+
 class VisionClassifier:
     """Logitech webcam -> payload class. Falls back to mock if no model/cam.
 
@@ -77,6 +154,7 @@ class VisionClassifier:
         self.session = None
         self._input_name = None
         self.last_detections = []          # [{box, conf, cls}, ...]
+        self.last_frame = None             # most recent raw BGR frame (for UI cam)
         self._vote_hist = deque(maxlen=config.VISION_VOTE_WINDOW)  # (hit, conf)
 
         self.active = False
@@ -131,6 +209,7 @@ class VisionClassifier:
             self.cap.release()
             self.cap = None
         self.active = False
+        self.last_frame = None             # camera window goes dark in the UI
         print("[decide] vision stood down")
 
     def classify(self):
@@ -142,6 +221,7 @@ class VisionClassifier:
         ok, frame = self.cap.read()
         if not ok:
             return "unknown", 0.0
+        self.last_frame = frame            # latest live frame for the UI cam window
 
         size = config.VISION_INPUT_SIZE
         img = cv2.resize(frame, (size, size))
@@ -180,6 +260,19 @@ class VisionClassifier:
     def release(self):
         if self.cap is not None:
             self.cap.release()
+
+    def frame_jpeg(self, max_w: int = 400):
+        """JPEG bytes of the latest live frame for the UI camera window, or None
+        when no real frame is available (mock mode / camera dark). Called from the
+        dashboard's HTTP thread, so encoding never blocks the control loop."""
+        frame = self.last_frame
+        if frame is None or self.mock or not _HAVE_CV:
+            return None
+        h, w = frame.shape[:2]
+        if w > max_w:
+            frame = cv2.resize(frame, (max_w, int(h * max_w / w)))
+        ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+        return buf.tobytes() if ok else None
 
 
 def _postprocess_yolo(output, conf_thresh: float, iou_thresh: float):

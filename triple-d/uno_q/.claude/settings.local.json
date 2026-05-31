@@ -26,7 +26,13 @@
       "Bash(/Users/brian/Downloads/SudarshanChakra-acoustic_uav_threat_detection_CNN/.venv/bin/python3 -c 'import librosa, sounddevice; print\\('\\\\''librosa+sounddevice ok'\\\\''\\)')",
       "Bash(/Users/brian/Downloads/SudarshanChakra-acoustic_uav_threat_detection_CNN/.venv/bin/python3 -c 'import cv2; print\\('\\\\''cv2'\\\\'', cv2.__version__\\)')",
       "Bash(/Users/brian/Downloads/SudarshanChakra-acoustic_uav_threat_detection_CNN/.venv/bin/python3 -c 'import onnxruntime as o; print\\('\\\\''ort'\\\\'', o.__version__\\)')",
-      "Bash(/Users/brian/Downloads/SudarshanChakra-acoustic_uav_threat_detection_CNN/.venv/bin/python3 -m pip install opencv-python onnxruntime)"
+      "Bash(/Users/brian/Downloads/SudarshanChakra-acoustic_uav_threat_detection_CNN/.venv/bin/python3 -m pip install opencv-python onnxruntime)",
+      "Bash(grep -v '^$')",
+      "Bash(echo \"exit=$? bytes=$\\(wc -c < /tmp/foe.log\\)\")",
+      "Bash(grep -av '^$')",
+      "Bash(awk 'NR>=14 && NR<=22 {printf \"%d| %s\\\\n\", NR, $0}')",
+      "Bash(echo \"exit=$?\")",
+      "Bash(node --check /tmp/_ui.js)"
     ]
   }
 }

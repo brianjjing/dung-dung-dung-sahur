@@ -63,7 +63,31 @@ SCORE_HOSTILE       = 0.60     # fused score at/above this => HOSTILE verdict
 # and standing the camera back down to resume audio listening.
 VISION_DECIDE_TIMEOUT_S = 1.5
 
+# ---------------------------------------------------- AUTONOMOUS IFF (friend/foe)
+# Once vision confirms a drone, Triple D decides defend-vs-stand-down ON ITS OWN
+# (no human) by challenging the contact for a predefined shared key. A friendly
+# drone is a second Arduino Uno preloaded with the same secret; it answers the
+# challenge and Triple D stands down. Anything that can't present the key is a
+# FOE -> autonomous DEFEAT (see iff.py).
+IFF_SHARED_SECRET       = "triple-d-shared-key-2025"  # preloaded on the friendly Uno
+IFF_CHALLENGE_TIMEOUT_S = 1.0     # wait this long for the contact to present the key
+# MOCK_IFF=True synthesizes the contact's reply (no second Uno on the wire) so the
+# whole decision path runs on a laptop. MOCK_IFF_FRIENDLY toggles its answer.
+MOCK_IFF          = True
+MOCK_IFF_FRIENDLY = False         # True -> simulated drone knows the key (stand down)
+IFF_PORT          = "/dev/ttyACM1"  # transceiver to the drone (real mode only)
+IFF_BAUD          = 115200
+
+# ------------------------------------------------------- AUTONOMOUS DEFEAT (foe)
+# Trajectory -> laser aim solution. The fiber-optic tether trails BEHIND the
+# drone along its flight path, so the cut is placed behind it and swept
+# perpendicular to travel.
+TRAJ_WINDOW         = 8           # frames of centroid history used to fit heading
+LASER_CUTOFF_BACK_PX = 60        # how far BEHIND the drone (image px) to place the cut
+
 # ----------------------------------------------------------------- AUTONOMY DIAL
+# Legacy human-gate dial (kept for human.py / autonomy.py). The post-detection
+# defend decision is now AUTONOMOUS via IFF and no longer consults this dial.
 # 0 teleop | 1 single-action assist | 2 detect+recommend, human gates ALL
 # 3 human-on-the-loop (acts, human can veto) | 4 auto-DISTRACT only, gate rest
 # 5 multi-agent (swarm hand-off)   --- see README "Degrees of autonomy"
@@ -76,3 +100,14 @@ USE_JOYSTICK   = False         # True -> Modulino Joystick; False -> keyboard
 # ----------------------------------------------------------------------- TIMING
 LOOP_HZ      = 20              # main control-loop rate
 COOLDOWN_S   = 4.0            # after a response, how long before re-arming
+
+# --------------------------------------------------------------------------- UI
+# Live operator dashboard (ui.py). A tiny stdlib HTTP server runs in a background
+# thread and publishes the brain's current state as JSON; a single-page canvas
+# frontend renders it: a responsive mic/waveform while listening, a radar
+# "SEARCHING" view while vision watches, and a bird's-eye tracking grid once a
+# drone is found. Zero extra dependencies; terminal output is unaffected.
+UI_ENABLED      = True
+UI_HOST         = "127.0.0.1"
+UI_PORT         = 8077
+UI_OPEN_BROWSER = True         # best-effort auto-open the dashboard at startup
